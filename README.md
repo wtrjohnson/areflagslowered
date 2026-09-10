@@ -98,8 +98,8 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
   resolution and X draft behavior
 - `npm run db:generate`: generate PostgreSQL migrations after schema changes
 - `npm run db:migrate`: apply migrations using `DATABASE_URL`
-- `npm run db:seed:jurisdictions`: seed the 56-jurisdiction registry
-- `npm run db:seed:sources`: seed the first 10 official monitoring sources
+- `npm run db:seed:jurisdictions`: seed the 57-jurisdiction registry
+- `npm run db:seed:sources`: seed the monitored official sources
 - `npm run ingest:federal -- --limit=10`: fetch and persist new White House candidates
 - `npm run ingest:federal -- --url=<proclamation-url> --force`: re-parse one source
 - `npm run ingest:federal -- --url=<proclamation-url> --dry-run`: fetch and print normalized data without Neon or local writes

@@ -20,9 +20,13 @@ export function parseStateStatusPage({ html, sourceId, url, pattern, retrievedAt
 }
 
 export const stateStatusPatterns: Record<string, StateStatusPattern> = {
+  "al-flag-status": { full: /Flag Status:\s*Full Staff/i, half: /Flag Status:\s*Half Staff/i },
   "fl-flag-information": { full: /Flag Status:\s*Full Staff/i, half: /Flag Status:\s*Half Staff/i },
+  "id-flag-status": { full: /Flag at full staff/i, half: /Flag at half staff/i },
+  "ms-flag-status": { full: /Flag Status:\s*Full-Staff/i, half: /Flag Status:\s*Half-Staff/i },
   "pa-flag-notices": { full: /United States Flag[\s\S]{0,120}Full-Staff[\s\S]{0,240}Commonwealth Flag[\s\S]{0,120}Full-Staff/i, half: /United States Flag[\s\S]{0,120}Half-Staff|Commonwealth Flag[\s\S]{0,120}Half-Staff/i },
   "nj-flag-status": { full: /All Flags Full-Staff/i, half: /All Flags Half-Staff/i },
   "ma-flag-status": { full: /Flags are flying at full staff/i, half: /flags? (?:are|will be|to be)[\s\S]{0,100}half-staff/i },
+  "ut-flag-status": { full: /currently at (?:the )?Full[- ]Staff/i, half: /currently at (?:the )?Half[- ]Staff/i },
   "wa-flag-lowering": { full: /Flag Status\s*-\s*Full staff/i, half: /Flag Status\s*-\s*Half staff/i },
 };
