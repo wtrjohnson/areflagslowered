@@ -1,0 +1,29 @@
+name: Ingest federal flag orders
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ingest:federal -- --limit=50
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: npm run monitor:states
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: npm run monitor:oklahoma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: npm run status:refresh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

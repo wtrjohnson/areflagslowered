@@ -1,0 +1,8 @@
+-- D1-compatible relational schema for the prototype.
+CREATE TABLE IF NOT EXISTS jurisdictions (id TEXT PRIMARY KEY, name TEXT NOT NULL, state_code TEXT, level TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS source_snapshots (id TEXT PRIMARY KEY, source_id TEXT NOT NULL, url TEXT NOT NULL, retrieved_at TEXT NOT NULL, content_hash TEXT NOT NULL, content TEXT NOT NULL, parser_status TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, title TEXT NOT NULL, reason TEXT NOT NULL, issuing_authority TEXT NOT NULL, jurisdiction_id TEXT NOT NULL REFERENCES jurisdictions(id), flag_types TEXT NOT NULL, scope TEXT NOT NULL, instruction_type TEXT NOT NULL, instruction_text TEXT NOT NULL, effective_start TEXT NOT NULL, effective_end TEXT, effective_end_time TEXT, effective_end_condition TEXT, time_zone TEXT, source_url TEXT NOT NULL, source_snapshot_id TEXT NOT NULL REFERENCES source_snapshots(id), status TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS social_drafts (id TEXT PRIMARY KEY, order_id TEXT NOT NULL REFERENCES orders(id), text TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS ingestion_runs (id TEXT PRIMARY KEY, source_id TEXT NOT NULL, started_at TEXT NOT NULL, completed_at TEXT, status TEXT NOT NULL, error TEXT);
+CREATE INDEX IF NOT EXISTS orders_effective_dates_idx ON orders(effective_start, effective_end);
+CREATE INDEX IF NOT EXISTS orders_jurisdiction_idx ON orders(jurisdiction_id);

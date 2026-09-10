@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root { --ink: #17202a; --muted: #68727d; --line: #d8dde1; --paper: #f6f5f1; --red: #b42318; --green: #1f6f4a; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; }
+main { max-width: 780px; margin: 0 auto; padding: 64px 24px 56px; }
+.eyebrow, .answer-kicker, label, .flag-status { font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; font-weight: 700; }
+.eyebrow { color: var(--red); margin: 0 0 22px; }
+h1 { max-width: 650px; margin: 0; font-size: clamp(44px, 9vw, 84px); line-height: .94; letter-spacing: -.055em; font-weight: 500; }
+.lede { font-size: 21px; line-height: 1.4; color: var(--muted); margin: 24px 0 44px; }
+.lookup { display: grid; grid-template-columns: 1fr 180px; gap: 14px; margin-bottom: 24px; }
+label { display: grid; gap: 8px; color: var(--muted); }
+input { width: 100%; border: 1px solid var(--line); border-radius: 2px; background: #fff; color: var(--ink); padding: 13px 12px; font: 16px Arial, sans-serif; }
+.answer { border-top: 5px solid var(--ink); background: #fff; padding: 30px; box-shadow: 0 8px 24px rgba(23, 32, 42, .05); }
+.answer-half_mast { border-color: var(--red); }
+.answer-full_mast { border-color: var(--green); }
+.answer-kicker { color: var(--muted); margin: 0 0 9px; }
+h2 { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.08; font-weight: 500; }
+.location { color: var(--muted); margin: 8px 0 28px; font-size: 18px; }
+.flag-results { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+.flag-results article { background: #fff; padding: 21px; min-height: 170px; }
+h3 { margin: 0 0 8px; font-size: 17px; }
+.flag-status { margin: 0 0 14px; color: var(--red); }
+.answer-full_mast .flag-status { color: var(--green); }
+.flag-status { color: var(--muted); }
+article p:not(.flag-status), footer p { color: var(--muted); line-height: 1.5; font-size: 15px; }
+.order { border-top: 1px solid var(--line); padding-top: 12px; }
+a { color: inherit; text-underline-offset: 3px; }
+input:focus-visible { outline: 3px solid rgba(31, 111, 74, .24); outline-offset: 2px; border-color: var(--green); }
+footer { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 14px; display: flex; justify-content: space-between; gap: 20px; }
+footer p { margin: 0; font-family: Arial, sans-serif; font-size: 11px !important; }
+@media (max-width: 600px) { main { padding: 42px 18px 40px; } .answer { padding: 22px 18px; } .lookup, .flag-results { grid-template-columns: 1fr; } footer { display: block; } footer p + p { margin-top: 8px; } }
