@@ -10,6 +10,7 @@ test("generic parser recognizes newly covered official state status formats", ()
     ["id-flag-status", "<h2>Flag at half staff</h2>"],
     ["ms-flag-status", "<h2>Flag Status: Half-Staff</h2>"],
     ["ut-flag-status", "<p>The flags are currently at Half Staff.</p>"],
+    ["va-flag-status", "<p>National Flag: Half Staff</p><p>State Flag: Half Staff</p>"],
   ];
   for (const [sourceId, html] of fixtures) {
     const parsed = parseStateStatusPage({ html, sourceId, url: `https://example.test/${sourceId}`, pattern: stateStatusPatterns[sourceId] });

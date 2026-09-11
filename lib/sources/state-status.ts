@@ -30,5 +30,6 @@ export const stateStatusPatterns: Record<string, StateStatusPattern> = {
   "nj-flag-status": { full: /All Flags Full-Staff/i, half: /All Flags Half-Staff/i },
   "ma-flag-status": { full: /Flags are flying at full staff/i, half: /flags? (?:are|will be|to be)[\s\S]{0,100}half-staff/i },
   "ut-flag-status": { full: /currently at (?:the )?Full[- ]Staff/i, half: /currently at (?:the )?Half[- ]Staff/i },
+  "va-flag-status": { full: /National Flag:\s*Full Staff[\s\S]{0,100}State Flag:\s*Full Staff/i, half: /National Flag:\s*Half Staff[\s\S]{0,100}State Flag:\s*Half Staff/i },
   "wa-flag-lowering": { full: /Flag Status\s*-\s*Full staff/i, half: /Flag Status\s*-\s*Half staff/i },
 };
