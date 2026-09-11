@@ -24,6 +24,9 @@ jobs:
       - run: npm run monitor:oklahoma
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: npm run monitor:newsrooms
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run status:refresh
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

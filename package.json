@@ -19,6 +19,7 @@
     "monitor:texas": "node --experimental-strip-types scripts/monitor-texas.ts",
     "monitor:states": "node --experimental-strip-types scripts/monitor-state-sources.ts",
     "monitor:oklahoma": "node --experimental-strip-types scripts/monitor-oklahoma.ts",
+    "monitor:newsrooms": "node --experimental-strip-types scripts/monitor-newsrooms.ts",
     "ingest:federal": "node --experimental-strip-types scripts/ingest-federal.ts"
   },
   "dependencies": {
