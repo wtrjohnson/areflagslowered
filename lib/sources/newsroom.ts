@@ -37,10 +37,11 @@ export function parseNewsroomRelease({ html, url, source, retrievedAt = new Date
   const title = clean(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || `${source.jurisdictionName} flag order`);
   const reason = text.match(/(?:in honor of|to honor|in memory of|to remember|in mourning for|in observance of)\s+([\s\S]{8,280}?)(?=(?:,?\s+(?:who|which|that)\b|\.|;|\s+Flags?\s|\s+all flags?\s|$))/i)?.[1]?.trim(); 
   const publicationYear = text.match(/\b[A-Z][a-z]{2} \d{1,2}, (\d{4})\b\s*[·-]\s*Office of the Governor/i)?.[1];
-  const period = text.match(/(?:from|beginning|starting|effective|on)\s+([A-Z][a-z]+ \d{1,2}(?:, \d{4})?)[\s\S]{0,180}?(?:lasting through|until|through|to|and remain(?: at half[- ]staff)? until)\s+(?:(?:sunset|sunrise|sundown)(?:\s+on|\s+of)?\s+)?([A-Z][a-z]+ \d{1,2}(?:, \d{4})?)/i);
-  const foundDates = dates(period?.[0] || text, publicationYear);
-  const effectiveStart = period ? dateValue(period[1], publicationYear) : foundDates[0];
-  const effectiveEnd = period ? dateValue(period[2], publicationYear) : foundDates[1];
+  const period = text.match(/(?:from|beginning|starting|effective|on)\s+(?:sunrise|sunset)?(?:\s+on)?\s*([A-Z][a-z]+ \d{1,2}(?:, \d{4})?)[\s\S]{0,180}?(?:lasting through|until|through|to|and remain(?: at half[- ]staff)? until)\s+(?:(?:sunset|sunrise|sundown)(?:\s+on|\s+of)?\s+)?([A-Z][a-z]+ \d{1,2}(?:, \d{4})?)/i);
+  const singleDay = text.match(/from\s+(?:sunrise|sunset)\s+to\s+(?:sunset|sunrise)\s+on\s+(?:[A-Z][a-z]+,\s+)?([A-Z][a-z]+ \d{1,2}(?:, \d{4})?)/i);
+  const foundDates = dates(period?.[0] || singleDay?.[0] || text, publicationYear);
+  const effectiveStart = period ? dateValue(period[1], publicationYear) : singleDay ? dateValue(singleDay[1], publicationYear) : foundDates[0];
+  const effectiveEnd = period ? dateValue(period[2], publicationYear) : singleDay ? effectiveStart : foundDates[1];
   if (!reason || !effectiveStart) return undefined;
   const contentHash = `${source.sourceId}-${text.length}-${text.slice(0, 80).replace(/\W/g, "")}`;
   const snapshot: SourceSnapshot = { id: contentHash, sourceId: source.sourceId, url, retrievedAt, contentHash, content: html, parserStatus: effectiveEnd ? "parsed" : "changed" };

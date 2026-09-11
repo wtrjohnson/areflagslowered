@@ -23,3 +23,10 @@ test("parses newsroom dates without repeated years and sunset wording", () => {
   assert.equal(order?.effectiveStart, "2025-06-05");
   assert.equal(order?.effectiveEnd, "2025-06-10");
 });
+
+test("parses a sunrise-to-sunset single-day order", () => {
+  const order = parseNewsroomRelease({ source: { ...source, jurisdictionId: "ar", jurisdictionName: "Arkansas", stateCode: "AR" }, url: "https://governor.arkansas.gov/newsroom/flags", html: '<h1>Governor Orders Flags to Half-Staff</h1><p>The United States flag and the state flag of Arkansas shall be flown at half-staff from sunrise to sunset on Friday, June 28, 2024, in memory of the lives lost.</p>' });
+  assert.equal(order?.status, "published");
+  assert.equal(order?.effectiveStart, "2024-06-28");
+  assert.equal(order?.effectiveEnd, "2024-06-28");
+});

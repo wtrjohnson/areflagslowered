@@ -19,10 +19,15 @@ for (const source of sources) {
   await startIngestionRun(db, runId, source.id);
   try {
     const headers = { "user-agent": "AreFlagsLowered/0.1 (+source-monitoring)" };
-    const indexResponse = await fetch(source.url, { headers });
-    if (!indexResponse.ok) throw new Error(`HTTP ${indexResponse.status}`);
-    const indexHtml = await indexResponse.text();
-    const releaseUrl = discoverNewsroomReleases(indexHtml, source.url)[0];
+    const indexUrls = [source.url, ...Array.from({ length: Math.max(0, (source.crawlPages || 1) - 1) }, (_, index) => new URL(`page/${index + 2}/`, source.url).toString())];
+    const releaseUrls: string[] = [];
+    for (const indexUrl of indexUrls) {
+      const indexResponse = await fetch(indexUrl, { headers });
+      if (!indexResponse.ok) continue;
+      releaseUrls.push(...discoverNewsroomReleases(await indexResponse.text(), indexUrl));
+      if (releaseUrls.length) break;
+    }
+    const releaseUrl = releaseUrls[0];
     if (!releaseUrl) throw new Error("No flag-related newsroom release found");
     const releaseResponse = await fetch(releaseUrl, { headers });
     if (!releaseResponse.ok) throw new Error(`HTTP ${releaseResponse.status}`);
