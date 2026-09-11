@@ -36,6 +36,11 @@ try {
     if (!(error instanceof Error) || !/ENOENT/.test(error.message)) throw error;
     stdout = extractEmbeddedPdfText(await readFile(pdfPath));
   }
+  if (!stdout.trim()) {
+    const imagePath = join(workDir, "order");
+    await exec("pdftoppm", ["-png", "-f", "1", "-singlefile", pdfPath, imagePath]);
+    ({ stdout } = await exec("tesseract", [`${imagePath}.png`, "stdout"]));
+  }
   await rm(workDir, { recursive: true, force: true });
   const parsed = parseGeorgiaFlagOrder({ text: stdout, url: candidate.url, title: candidate.title, retrievedAt: now.toISOString() });
   if (!parsed) throw new Error("Georgia PDF requires parser review");
