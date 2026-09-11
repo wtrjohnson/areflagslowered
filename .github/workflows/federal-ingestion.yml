@@ -15,6 +15,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
       - run: npm run ingest:federal -- --limit=50
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -25,6 +26,9 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run monitor:newsrooms
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: npm run monitor:georgia
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run status:refresh

@@ -19,12 +19,20 @@ for (const source of sources) {
   await startIngestionRun(db, runId, source.id);
   try {
     const headers = { "user-agent": "AreFlagsLowered/0.1 (+source-monitoring)" };
-    const indexUrls = [source.url, ...Array.from({ length: Math.max(0, (source.crawlPages || 1) - 1) }, (_, index) => new URL(`page/${index + 2}/`, source.url).toString())];
+    const indexUrls = source.discoveryMode === "california_wp"
+      ? ["https://www.gov.ca.gov/wp-json/wp/v2/search?search=flags&per_page=20"]
+      : [source.url, ...Array.from({ length: Math.max(0, (source.crawlPages || 1) - 1) }, (_, index) => new URL(`page/${index + 2}/`, source.url).toString())];
     const releaseUrls: string[] = [];
     for (const indexUrl of indexUrls) {
       const indexResponse = await fetch(indexUrl, { headers });
       if (!indexResponse.ok) continue;
-      releaseUrls.push(...discoverNewsroomReleases(await indexResponse.text(), indexUrl));
+      const indexHtml = await indexResponse.text();
+      if (source.discoveryMode === "california_wp") {
+        try {
+          const results = JSON.parse(indexHtml) as Array<{ url?: string; title?: string }>;
+          releaseUrls.push(...results.filter((result) => /flag|half[- ]staff|lowered/i.test(result.title || "")).map((result) => result.url).filter((url): url is string => Boolean(url)));
+        } catch { /* fall through to review */ }
+      } else releaseUrls.push(...discoverNewsroomReleases(indexHtml, indexUrl));
       if (releaseUrls.length) break;
     }
     const releaseUrl = releaseUrls[0];

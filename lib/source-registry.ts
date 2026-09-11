@@ -9,6 +9,7 @@ export type MonitoredSource = {
   timeZone: string;
   pollIntervalMinutes: number;
   crawlPages?: number;
+  discoveryMode?: "html" | "california_wp";
 };
 
 // Representative official sources. Exact URLs are kept in code so source
@@ -34,6 +35,7 @@ export const monitoredSources: MonitoredSource[] = [
   { id: "wa-flag-lowering", jurisdictionId: "wa", name: "Washington Flag Lowering and Display", url: "https://governor.wa.gov/official-actions/flag-lowering-and-display", sourceType: "directives", parserName: "washington_flag_directives", priority: "primary", timeZone: "America/Los_Angeles", pollIntervalMinutes: 30 },
   { id: "ct-governor-newsroom", jurisdictionId: "ct", name: "Connecticut Governor Flag Orders", url: "https://portal.ct.gov/governor/news/press-releases", sourceType: "newsroom", parserName: "generic_newsroom_order", priority: "primary", timeZone: "America/New_York", pollIntervalMinutes: 30 },
   { id: "ar-governor-newsroom", jurisdictionId: "ar", name: "Arkansas Governor Flag Orders", url: "https://governor.arkansas.gov/newsroom/", sourceType: "newsroom", parserName: "generic_newsroom_order", priority: "primary", timeZone: "America/Chicago", pollIntervalMinutes: 30, crawlPages: 8 },
+  { id: "ca-governor-newsroom", jurisdictionId: "ca", name: "California Governor Flag Orders", url: "https://www.gov.ca.gov/newsroom/", sourceType: "newsroom", parserName: "generic_newsroom_order", priority: "primary", timeZone: "America/Los_Angeles", pollIntervalMinutes: 30, discoveryMode: "california_wp" },
   { id: "de-governor-newsroom", jurisdictionId: "de", name: "Delaware Governor Flag Orders", url: "https://news.delaware.gov/category/governor/", sourceType: "newsroom", parserName: "generic_newsroom_order", priority: "primary", timeZone: "America/New_York", pollIntervalMinutes: 30 },
   { id: "nm-governor-newsroom", jurisdictionId: "nm", name: "New Mexico Governor Flag Orders", url: "https://governor.nm.gov/newsroom/", sourceType: "newsroom", parserName: "generic_newsroom_order", priority: "primary", timeZone: "America/Denver", pollIntervalMinutes: 30 },
   { id: "wv-governor-newsroom", jurisdictionId: "wv", name: "West Virginia Governor Flag Orders", url: "https://governor.wv.gov/news", sourceType: "newsroom", parserName: "generic_newsroom_order", priority: "primary", timeZone: "America/New_York", pollIntervalMinutes: 30 },
