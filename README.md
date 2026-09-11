@@ -111,7 +111,11 @@ The primary endpoint is `GET /api/status`:
 ```text
 /api/status?location=New%20York%2C%20NY&state=NY
 /api/status?location=New%20York%2C%20NY&state=NY&format=text
+/api/status?all=true&format=text
 ```
+
+Use `all=true` for a single text response containing every current federal,
+state, and territorial U.S.-flag and state-flag status.
 
 Without Neon, use the local Dolly fixture to exercise an active order:
 

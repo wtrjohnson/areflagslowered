@@ -3,7 +3,8 @@ import { answerStatus } from "../../../lib/answer-engine.ts";
 import { renderStatusText } from "../../../lib/render.ts";
 import { getDb } from "../../../db/index.ts";
 import { listActiveOrders } from "../../../db/orders.ts";
-import { getCurrentStatuses } from "../../../db/status.ts";
+import { getAllCurrentStatuses, getCurrentStatuses } from "../../../db/status.ts";
+import { renderAllStatusesText } from "../../../lib/render.ts";
 import { orders as fallbackOrders } from "../../../lib/data.ts";
 import { demoOrders } from "../../../lib/demo-data.ts";
 
@@ -14,6 +15,25 @@ export async function GET(request: Request) {
   const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
   const time = url.searchParams.get("time") || undefined;
   const demo = url.searchParams.get("demo");
+  const all = url.searchParams.get("all") === "true";
+  if (all) {
+    try {
+      let databaseUrl = process.env.DATABASE_URL;
+      try {
+        const { env } = await import("cloudflare:workers");
+        databaseUrl = (env as { DATABASE_URL?: string }).DATABASE_URL || databaseUrl;
+      } catch {
+        // Local Node execution uses process.env.
+      }
+      const rows = await getAllCurrentStatuses(getDb(databaseUrl));
+      const checkedAt = rows.map((row) => row.status.checkedAt).sort((a, b) => +new Date(b) - +new Date(a))[0]?.toISOString() || new Date().toISOString();
+      const wantsText = url.searchParams.get("format") === "text" || request.headers.get("accept")?.includes("text/plain");
+      if (wantsText) return new Response(renderAllStatusesText(rows, checkedAt), { headers: { "content-type": "text/plain; charset=utf-8" } });
+      return NextResponse.json({ date, checkedAt, statuses: rows, summary: `All current flag statuses as of ${checkedAt}.` });
+    } catch {
+      return NextResponse.json({ status: "uncertain", error: "Status database unavailable" }, { status: 503 });
+    }
+  }
   let orderRecords: Awaited<ReturnType<typeof listActiveOrders>>;
   let persistedStatuses;
   if (process.env.NODE_ENV === "development" && demo && demoOrders[demo]) {

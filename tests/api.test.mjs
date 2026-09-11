@@ -11,6 +11,17 @@ test("text format is available for readable API consumption", async () => {
   assert.match(body, /Coverage:/);
 });
 
+test("all-status text groups U.S. and state indicators by jurisdiction", async () => {
+  const { renderAllStatusesText } = await import("../lib/render.ts");
+  const body = renderAllStatusesText([
+    { jurisdiction: { id: "us", name: "United States", stateCode: null, level: "federal" }, status: { jurisdictionId: "us", flagType: "us", status: "half_mast", sourceUrl: null, checkedAt: "2026-09-10T12:00:00.000Z" } },
+    { jurisdiction: { id: "ok", name: "Oklahoma", stateCode: "OK", level: "state" }, status: { jurisdictionId: "ok", flagType: "us", status: "half_mast", sourceUrl: null, checkedAt: "2026-09-10T12:00:00.000Z" } },
+    { jurisdiction: { id: "ok", name: "Oklahoma", stateCode: "OK", level: "state" }, status: { jurisdictionId: "ok", flagType: "state", status: "below_us", sourceUrl: null, checkedAt: "2026-09-10T12:00:00.000Z" } },
+  ], "2026-09-10T12:00:00.000Z");
+  assert.match(body, /ALL CURRENT FLAG STATUSES/);
+  assert.match(body, /Oklahoma \(OK\): U\.S\. flag HALF-MAST \[ACTIVE\] \| State flag BELOW U\.S\. FLAG \[BELOW U\.S\.\]/);
+});
+
 test("local Dolly fixture produces an active federal API answer", async () => {
   const { demoOrders } = await import("../lib/demo-data.ts");
   const { answerStatus } = await import("../lib/answer-engine.ts");

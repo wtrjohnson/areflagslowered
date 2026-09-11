@@ -1,6 +1,6 @@
 import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { getDb } from "./index.ts";
-import { currentStatus, manualOverrides, statusHistory } from "./schema.ts";
+import { currentStatus, jurisdictions, manualOverrides, statusHistory } from "./schema.ts";
 import { listActiveOrders } from "./orders.ts";
 import { allJurisdictions } from "../lib/jurisdictions.ts";
 import type { FlagType, HalfMastOrder } from "../lib/types.ts";
@@ -58,6 +58,10 @@ export async function refreshCurrentStatuses(db: Database, date: string, checked
 
 export async function getCurrentStatuses(db: Database, jurisdictionId: string) {
   return db.select().from(currentStatus).where(eq(currentStatus.jurisdictionId, jurisdictionId));
+}
+
+export async function getAllCurrentStatuses(db: Database) {
+  return db.select({ status: currentStatus, jurisdiction: jurisdictions }).from(currentStatus).innerJoin(jurisdictions, eq(currentStatus.jurisdictionId, jurisdictions.id));
 }
 
 export async function applyDirectStatus(db: Database, jurisdictionId: string, parsed: ParsedJurisdictionStatus, checkedAt = new Date()) {
