@@ -6,6 +6,8 @@ test("text format is available for readable API consumption", async () => {
   const { renderStatusText } = await import("../lib/render.ts");
   const body = renderStatusText(answerStatus({ location: "New York, NY", stateCode: "NY", date: "2026-09-07", checkedAt: "2026-09-07T12:00:00.000Z" }));
   assert.match(body, /NO: flags should be at full mast/);
+  assert.match(body, /U\.S\. flag: FULL MAST \[INACTIVE\]/);
+  assert.match(body, /State flag: FULL MAST \[INACTIVE\]/);
   assert.match(body, /Coverage:/);
 });
 
@@ -16,6 +18,9 @@ test("local Dolly fixture produces an active federal API answer", async () => {
   assert.equal(answer.status, "half_mast");
   assert.equal(answer.flagResults[0].status, "half_mast");
   assert.match(answer.flagResults[0].orders[0].reason, /Dolly Parton/);
+  const { renderStatusText } = await import("../lib/render.ts");
+  assert.match(renderStatusText(answer), /U\.S\. flag: HALF-MAST \[ACTIVE\]/);
+  assert.match(renderStatusText(answer), /State flag: BELOW U\.S\. FLAG \[BELOW U\.S\.\]/);
 });
 
 test("local Dolly fixture expires after its effective end date", async () => {
