@@ -48,6 +48,10 @@ export async function refreshCurrentStatuses(db: Database, date: string, checked
         status = matchingOrders.length ? "half_mast" : "full_mast";
         orderIds = matchingOrders.map((order) => order.id);
         reason = matchingOrders.length ? matchingOrders.map((order) => order.reason).join(" ") : "No current official order found.";
+      } else if (flagType === "us") {
+        status = "full_mast";
+        orderIds = [];
+        reason = "No active nationwide federal order found.";
       } else {
         status = directlyMonitoredJurisdictions.has(jurisdiction.id) && priorDirect ? priorDirect.status as StatusValue : "uncertain";
         orderIds = [];
