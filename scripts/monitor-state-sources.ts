@@ -2,6 +2,7 @@ import { getDb } from "../db/index.ts";
 import { applyDirectStatus } from "../db/status.ts";
 import { finishIngestionRun, getSource, listActiveOrders, recordSourceCheck, startIngestionRun, upsertJurisdiction, upsertSource, upsertSourceSnapshot, updateSourceHealth } from "../db/orders.ts";
 import { monitoredSources } from "../lib/source-registry.ts";
+import { jurisdictionCatalog } from "../lib/jurisdictions.ts";
 import { parseTexasFlagStatus } from "../lib/sources/texas.ts";
 import { parseStateStatusPage, stateStatusPatterns } from "../lib/sources/state-status.ts";
 import { OKLAHOMA_FULL_URL, OKLAHOMA_HALF_URL, parseOklahomaFlagStatus } from "../lib/sources/oklahoma.ts";
@@ -21,7 +22,8 @@ for (const source of supported) {
   const runId = `state-${source.id}-${now.getTime()}`;
   const checkId = `check-${source.id}-${now.getTime()}`;
   const started = Date.now();
-  await upsertJurisdiction(db, { id: source.jurisdictionId, name: source.jurisdictionId === "tx" ? "Texas" : source.jurisdictionId.toUpperCase(), stateCode: source.jurisdictionId.toUpperCase(), level: "state" });
+  const jurisdiction = jurisdictionCatalog.find((value) => value.id === source.jurisdictionId);
+  await upsertJurisdiction(db, jurisdiction || { id: source.jurisdictionId, name: source.jurisdictionId.toUpperCase(), stateCode: source.jurisdictionId.toUpperCase(), level: "state" });
   await upsertSource(db, source);
   await startIngestionRun(db, runId, source.id);
   const storedSource = await getSource(db, source.id);

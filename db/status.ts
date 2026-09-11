@@ -3,6 +3,8 @@ import { getDb } from "./index.ts";
 import { currentStatus, jurisdictions, manualOverrides, statusHistory } from "./schema.ts";
 import { listActiveOrders } from "./orders.ts";
 import { allJurisdictions } from "../lib/jurisdictions.ts";
+import { monitoredSources } from "../lib/source-registry.ts";
+import { stateStatusPatterns } from "../lib/sources/state-status.ts";
 import type { FlagType, HalfMastOrder } from "../lib/types.ts";
 import type { ParsedJurisdictionStatus } from "../lib/sources/texas.ts";
 
@@ -24,11 +26,13 @@ export async function refreshCurrentStatuses(db: Database, date: string, checked
   const federalOrder = activeOrders.find((order) => order.jurisdiction.level === "federal" && order.flagTypes.includes("us") && order.scope === "nationwide");
   const overrides = await db.select().from(manualOverrides).where(and(eq(manualOverrides.active, 1), or(isNull(manualOverrides.expiresAt), gt(manualOverrides.expiresAt, checkedAt))));
   const existing = await db.select().from(currentStatus);
+  const directlyMonitoredJurisdictions = new Set(monitoredSources.filter((source) => source.id === "tx-flag-status" || source.id === "ok-flag-status" || stateStatusPatterns[source.id]).map((source) => source.jurisdictionId));
 
   for (const jurisdiction of allJurisdictions) {
     for (const flagType of ["us", "state"] as FlagType[]) {
       const override = overrides.find((value) => value.jurisdictionId === jurisdiction.id && value.flagType === flagType);
       const matchingOrders = activeOrders.filter((order) => order.flagTypes.includes(flagType) && appliesToJurisdiction(order, jurisdiction.id));
+      const priorDirect = existing.find((value) => value.id === `current-${jurisdiction.id}-${flagType}` && value.sourceId && value.sourceId !== "white-house-presidential-actions");
       let status: StatusValue;
       let orderIds: string[];
       let reason: string;
@@ -40,15 +44,19 @@ export async function refreshCurrentStatuses(db: Database, date: string, checked
         status = flagType === "us" ? "half_mast" : "below_us";
         orderIds = [federalOrder.id];
         reason = flagType === "us" ? federalOrder.reason : "Federal U.S. flag order is active; the state flag remains below the U.S. flag.";
-      } else {
+      } else if (matchingOrders.length) {
         status = matchingOrders.length ? "half_mast" : "full_mast";
         orderIds = matchingOrders.map((order) => order.id);
         reason = matchingOrders.length ? matchingOrders.map((order) => order.reason).join(" ") : "No current official order found.";
+      } else {
+        status = directlyMonitoredJurisdictions.has(jurisdiction.id) && priorDirect ? priorDirect.status as StatusValue : "uncertain";
+        orderIds = [];
+        reason = status === "uncertain" ? "No verified live state source is currently connected for this jurisdiction." : "Official jurisdiction source reports the current status.";
       }
       const id = `current-${jurisdiction.id}-${flagType}`;
       const previous = existing.find((value) => value.id === id);
       const sourceOrder = orderIds.length ? activeOrders.find((order) => order.id === orderIds[0]) : undefined;
-      await db.insert(currentStatus).values({ id, jurisdictionId: jurisdiction.id, flagType, status, orderIds, sourceId: sourceOrder ? "white-house-presidential-actions" : undefined, sourceUrl: sourceFor(matchingOrders), confidence: override ? "manual" : "official", checkedAt, coverageNotice }).onConflictDoUpdate({ target: currentStatus.id, set: { status, orderIds, sourceId: sourceOrder ? "white-house-presidential-actions" : undefined, sourceUrl: sourceFor(matchingOrders), confidence: override ? "manual" : "official", checkedAt, coverageNotice } });
+      await db.insert(currentStatus).values({ id, jurisdictionId: jurisdiction.id, flagType, status, orderIds, sourceId: sourceOrder ? "white-house-presidential-actions" : priorDirect?.sourceId, sourceUrl: sourceOrder ? sourceFor(matchingOrders) : priorDirect?.sourceUrl, confidence: override ? "manual" : status === "uncertain" ? "review" : "official", checkedAt, coverageNotice }).onConflictDoUpdate({ target: currentStatus.id, set: { status, orderIds, sourceId: sourceOrder ? "white-house-presidential-actions" : priorDirect?.sourceId, sourceUrl: sourceOrder ? sourceFor(matchingOrders) : priorDirect?.sourceUrl, confidence: override ? "manual" : status === "uncertain" ? "review" : "official", checkedAt, coverageNotice } });
       if (!previous || previous.status !== status || JSON.stringify(previous.orderIds) !== JSON.stringify(orderIds)) {
         await db.insert(statusHistory).values({ id: `history-${id}-${checkedAt.getTime()}`, jurisdictionId: jurisdiction.id, flagType, status, orderIds, observedAt: checkedAt, sourceUrl: sourceFor(matchingOrders), reason });
       }
