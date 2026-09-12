@@ -5,8 +5,8 @@ const { discoverWhiteHouseLinks, isHalfStaffCandidate, parseWhiteHouseProclamati
 const { parseTexasFlagStatus } = await import("../lib/sources/texas.ts");
 const { parseStateStatusPage, stateStatusPatterns } = await import("../lib/sources/state-status.ts");
 
-const dolly = `<h1>HONORING THE MEMORY OF DOLLY PARTON</h1><p>August 25, 2026</p><p>As a mark of respect, I hereby order that the flag of the United States shall be flown at half-staff throughout the United States until sunset, September 1, 2026.</p>`;
-const memorial = `<h1>MEMORIAL DAY, 2026</h1><p>May 22, 2026</p><p>I request the Governors to direct that on Memorial Day, May 25, 2026, the flag be flown at half-staff until noon.</p>`;
+const dolly = `<h1>HONORING THE MEMORY OF DOLLY PARTON</h1><p>August 25, 2026</p><p>As a mark of respect, I hereby order that from sunrise on August 25, 2026, the flag of the United States shall be flown at half-staff throughout the United States until sunset, September 1, 2026.</p>`;
+const memorial = `<h1>MEMORIAL DAY, 2026</h1><p>May 22, 2026</p><p>I request the Governors to direct that from sunrise on Memorial Day, May 25, 2026, the flag be flown at half-staff until noon.</p>`;
 
 test("discovers only presidential action links", () => {
   assert.deepEqual(discoverWhiteHouseLinks('<a href="/presidential-actions/2026/08/example/">one</a><a href="/news/">no</a>'), ["https://www.whitehouse.gov/presidential-actions/2026/08/example/"]);
@@ -17,11 +17,14 @@ test("parses a nationwide order and its end date", () => {
   assert.equal(result.needsReview, false);
   assert.equal(result.order.effectiveStart, "2026-08-25");
   assert.equal(result.order.effectiveEnd, "2026-09-01");
+  assert.match(result.order.effectiveStartTime, /^\d{2}:\d{2}$/);
+  assert.match(result.order.effectiveEndTime, /^\d{2}:\d{2}$/);
   assert.equal(result.order.instructionType, "order");
 });
 
 test("normalizes an exact clock end time and preserves the reason", () => {
-  const result = parseWhiteHouseProclamation({ html: `<h1>DEATH OF SENATOR TEST</h1><p>July 13, 2026</p><p>As a mark of respect for the memory and service of Senator Test, I hereby order that the flag shall be flown at half-staff until 6:00 p.m. on July 18, 2026.</p>`, url: "https://www.whitehouse.gov/presidential-actions/2026/07/death-of-senator-test/" });
+  const result = parseWhiteHouseProclamation({ html: `<h1>DEATH OF SENATOR TEST</h1><p>July 13, 2026</p><p>As a mark of respect for the memory and service of Senator Test, I hereby order that from 8:00 a.m. on July 13, 2026, the flag shall be flown at half-staff until 6:00 p.m. on July 18, 2026.</p>`, url: "https://www.whitehouse.gov/presidential-actions/2026/07/death-of-senator-test/" });
+  assert.equal(result.order.effectiveStartTime, "08:00");
   assert.equal(result.order.effectiveEndTime, "18:00");
   assert.equal(result.order.effectiveEndCondition, "clock");
   assert.match(result.order.reason, /As a mark of respect/);

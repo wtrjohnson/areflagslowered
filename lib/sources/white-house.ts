@@ -1,4 +1,5 @@
 import type { HalfMastOrder, Jurisdiction, SourceSnapshot } from "../types.ts";
+import { normalizeClockTime, solarTime } from "../timing.ts";
 
 export const WHITE_HOUSE_SEARCH_URL = "https://www.whitehouse.gov/presidential-actions/?s=half-staff";
 export const federalJurisdiction: Jurisdiction = { id: "us", name: "United States", level: "federal" };
@@ -23,17 +24,6 @@ function stripHtml(html: string) {
 function parseDate(value: string) {
   const parsed = new Date(`${value} UTC`);
   return Number.isNaN(parsed.valueOf()) ? undefined : parsed.toISOString().slice(0, 10);
-}
-
-function normalizeClockTime(value?: string) {
-  if (!value) return undefined;
-  const normalized = value.toLowerCase().replace(/\s|\./g, "");
-  const match = normalized.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/);
-  if (!match) return value;
-  let hour = Number(match[1]);
-  if (match[3] === "pm" && hour !== 12) hour += 12;
-  if (match[3] === "am" && hour === 12) hour = 0;
-  return `${String(hour).padStart(2, "0")}:${match[2] || "00"}`;
 }
 
 function findEnd(text: string) {
@@ -94,11 +84,14 @@ export function parseWhiteHouseProclamation({ html, url, retrievedAt = new Date(
   const publicationDate = findPublicationDate(text);
   const effectiveStart = publicationDate ? findEffectiveStart(text, publicationDate) : undefined;
   const end = findEnd(text);
+  const startContext = text.slice(0, Math.max(0, text.search(/half[\u2010-\u2015 -]*(?:staff|mast)/i)));
+  const effectiveStartTime = effectiveStart && (/\bsunrise\b/i.test(startContext) ? solarTime(effectiveStart, "sunrise", "America/New_York") : normalizeClockTime(startContext.match(/(?:at|from|beginning at)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]));
+  const effectiveEndTime = end?.date && (/sunset/i.test(end.text) ? solarTime(end.date, "sunset", "America/New_York") : end.time);
   const hasInstruction = /(?:hereby order|request(?:s|ed)?|direct(?:s|ed)?).{0,360}(?:half[\u2010-\u2015 -]*staff|half[\u2010-\u2015 -]*mast)/i.test(text);
   const contentHash = `sha256-${text.length}-${text.slice(0, 32).replace(/\W/g, "")}`;
   const snapshot: SourceSnapshot = { id: `white-house-${contentHash}`, sourceId: "white-house-presidential-actions", url, retrievedAt, contentHash, content: html, parserStatus: hasInstruction && effectiveStart && end ? "parsed" : "changed" };
-  if (!effectiveStart || !end || !hasInstruction) {
-    return { snapshot, needsReview: true, reason: !publicationDate ? "Publication date not found." : !end ? "A clear effective end was not found." : "No clear half-staff instruction was found." };
+  if (!effectiveStart || !end || !effectiveStartTime || !effectiveEndTime || !hasInstruction) {
+    return { snapshot, needsReview: true, reason: !publicationDate ? "Publication date not found." : !end ? "A clear effective end was not found." : !effectiveStartTime || !effectiveEndTime ? "A complete start and end date/time was not found." : "No clear half-staff instruction was found." };
   }
   const instructionType = /\brequest(?:ed|s)?\b/i.test(text) && !/\bhereby order\b/i.test(text) ? "request" : /\bhereby order\b|\bshall be flown\b/i.test(text) ? "order" : "unknown";
   const instructionText = text.slice(Math.max(0, text.search(/(?:hereby order|request|direct).{0,500}(?:half[\u2010-\u2015 -]*staff|half[\u2010-\u2015 -]*mast)/i)), Math.min(text.length, text.search(/(?:hereby order|request|direct).{0,500}(?:half[\u2010-\u2015 -]*staff|half[\u2010-\u2015 -]*mast)/i) + 700));
@@ -113,9 +106,10 @@ export function parseWhiteHouseProclamation({ html, url, retrievedAt = new Date(
     instructionType,
     instructionText,
     effectiveStart,
+    effectiveStartTime,
     effectiveEnd: end.date,
-    effectiveEndTime: end.time,
-    effectiveEndCondition: end.condition,
+    effectiveEndTime,
+    effectiveEndCondition: /sunset/i.test(end.text) ? "sunset" : end.condition,
     timeZone: "local",
     sourceUrl: url,
     sourceSnapshotId: snapshot.id,

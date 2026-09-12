@@ -16,6 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils tesseract-ocr
+      - run: npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run ingest:federal -- --limit=50
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

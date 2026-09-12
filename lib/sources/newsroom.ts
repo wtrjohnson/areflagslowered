@@ -1,4 +1,5 @@
 import type { HalfMastOrder, SourceSnapshot } from "../types.ts";
+import { normalizeClockTime, solarTime } from "../timing.ts";
 
 export type NewsroomSource = {
   sourceId: string;
@@ -43,8 +44,14 @@ export function parseNewsroomRelease({ html, url, source, retrievedAt = new Date
   const effectiveStart = period ? dateValue(period[1], publicationYear) : singleDay ? dateValue(singleDay[1], publicationYear) : foundDates[0];
   const effectiveEnd = period ? dateValue(period[2], publicationYear) : singleDay ? effectiveStart : foundDates[1];
   if (!reason || !effectiveStart) return undefined;
+  const periodText = period?.[0] || singleDay?.[0] || "";
+  const startClock = periodText.match(/(?:beginning|starting|effective|from)[\s\S]{0,80}?\b(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))\b/i)?.[1];
+  const endClock = periodText.match(/(?:until|through|to)[\s\S]{0,80}?\b(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))\b/i)?.[1];
+  const effectiveStartTime = /sunrise/i.test(periodText) ? solarTime(effectiveStart, "sunrise", source.timeZone, source.stateCode) : normalizeClockTime(startClock);
+  const effectiveEndTime = effectiveEnd && (/sunset|sundown/i.test(periodText) ? solarTime(effectiveEnd, "sunset", source.timeZone, source.stateCode) : normalizeClockTime(endClock));
   const contentHash = `${source.sourceId}-${text.length}-${text.slice(0, 80).replace(/\W/g, "")}`;
-  const snapshot: SourceSnapshot = { id: contentHash, sourceId: source.sourceId, url, retrievedAt, contentHash, content: html, parserStatus: effectiveEnd ? "parsed" : "changed" };
+  const completeTiming = Boolean(effectiveStartTime && effectiveEnd && effectiveEndTime);
+  const snapshot: SourceSnapshot = { id: contentHash, sourceId: source.sourceId, url, retrievedAt, contentHash, content: html, parserStatus: completeTiming ? "parsed" : "changed" };
   return {
     id: `${source.jurisdictionId}-${contentHash}`,
     title,
@@ -56,12 +63,14 @@ export function parseNewsroomRelease({ html, url, source, retrievedAt = new Date
     instructionType: "order",
     instructionText: text,
     effectiveStart,
+    effectiveStartTime,
     effectiveEnd,
-    effectiveEndCondition: /sunset/i.test(period?.[0] || text) ? "sunset" : "clock",
+    effectiveEndTime,
+    effectiveEndCondition: /sunset/i.test(periodText) ? "sunset" : "clock",
     timeZone: source.timeZone as HalfMastOrder["timeZone"],
     sourceUrl: url,
     sourceSnapshotId: snapshot.id,
-    status: effectiveEnd ? "published" : "needs_review",
+    status: completeTiming ? "published" : "needs_review",
     createdAt: retrievedAt,
     snapshot,
   };

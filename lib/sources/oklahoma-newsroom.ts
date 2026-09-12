@@ -1,4 +1,5 @@
 import type { HalfMastOrder, SourceSnapshot } from "../types.ts";
+import { normalizeClockTime, solarTime } from "../timing.ts";
 
 export const OKLAHOMA_NEWSROOM_URL = "https://oklahoma.gov/governor/newsroom/newsroom.html";
 export const OKLAHOMA_NEWSROOM_FEED_URL = "https://oklahoma.gov/content/sok-wcm/en/governor/newsroom/newsroom/jcr:content/responsivegrid-second/newslisting.json?page=1";
@@ -25,7 +26,10 @@ export function parseOklahomaFlagRelease({ html, url, retrievedAt = new Date().t
   const effectiveStart = normalizedDate(period?.[1]);
   const effectiveEnd = normalizedDate(period?.[2]);
   if (!reason || !effectiveStart || !effectiveEnd) return undefined;
+  const effectiveStartTime = /sunrise/i.test(schedule) ? solarTime(effectiveStart, "sunrise", "America/Chicago", "OK") : normalizeClockTime(schedule.match(/(?:from|at|beginning)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]);
+  const effectiveEndTime = /sunset|sundown/i.test(schedule) ? solarTime(effectiveEnd, "sunset", "America/Chicago", "OK") : normalizeClockTime(schedule.match(/(?:until|through|to)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]);
   const contentHash = `ok-news-${text.length}-${text.slice(0, 48).replace(/\W/g, "")}`;
   const snapshot: SourceSnapshot = { id: contentHash, sourceId: "ok-newsroom", url, retrievedAt, contentHash, content: html, parserStatus: "parsed" };
-  return { id: `oklahoma-${contentHash}`, title, reason, issuingAuthority: "The Governor of Oklahoma", jurisdiction: { id: "ok", name: "Oklahoma", stateCode: "OK", level: "state" }, flagTypes: ["us", "state"], scope: "statewide", instructionType: "order", instructionText: text, effectiveStart, effectiveEnd, effectiveEndCondition: "clock", timeZone: "America/Chicago", sourceUrl: url, sourceSnapshotId: snapshot.id, status: "published", createdAt: retrievedAt, snapshot };
+  const completeTiming = Boolean(effectiveStartTime && effectiveEndTime);
+  return { id: `oklahoma-${contentHash}`, title, reason, issuingAuthority: "The Governor of Oklahoma", jurisdiction: { id: "ok", name: "Oklahoma", stateCode: "OK", level: "state" }, flagTypes: ["us", "state"], scope: "statewide", instructionType: "order", instructionText: text, effectiveStart, effectiveStartTime, effectiveEnd, effectiveEndTime, effectiveEndCondition: /sunset|sundown/i.test(schedule) ? "sunset" : "clock", timeZone: "America/Chicago", sourceUrl: url, sourceSnapshotId: snapshot.id, status: completeTiming ? "published" : "needs_review", createdAt: retrievedAt, snapshot };
 }

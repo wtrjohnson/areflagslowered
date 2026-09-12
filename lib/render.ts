@@ -39,7 +39,7 @@ export function renderStatusText(answer: StatusAnswer) {
       const details = result.orders.flatMap((order) => [
         `Why: ${order.reason}`,
         `Where: ${order.scope === "nationwide" ? "Nationwide" : order.jurisdiction.name}`,
-        `When: ${formatDate(order.effectiveStart)} through ${order.effectiveEnd ? `${formatDate(order.effectiveEnd)}${order.effectiveEndTime ? ` at ${order.effectiveEndTime}` : order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : ""}` : "further notice"}`,
+        `When: ${formatDate(order.effectiveStart)}${order.effectiveStartTime ? ` at ${order.effectiveStartTime}` : ""} through ${order.effectiveEnd ? `${formatDate(order.effectiveEnd)}${order.effectiveEndTime ? ` at ${order.effectiveEndTime}` : order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : ""}` : "further notice"}`,
         `Authority: ${order.issuingAuthority}`,
         `Source: ${order.sourceUrl}`,
       ]);

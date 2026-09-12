@@ -83,6 +83,7 @@ export const orders = pgTable("orders", {
   instructionType: text("instruction_type").notNull(),
   instructionText: text("instruction_text").notNull(),
   effectiveStart: text("effective_start").notNull(),
+  effectiveStartTime: text("effective_start_time"),
   effectiveEnd: text("effective_end"),
   effectiveEndTime: text("effective_end_time"),
   effectiveEndCondition: text("effective_end_condition"),

@@ -10,16 +10,18 @@ test("discovers flag-related newsroom links", () => {
 });
 
 test("parses a dated newsroom order", () => {
-  const order = parseNewsroomRelease({ source, url: "https://example.gov/news/flags-half-staff", html: '<h1>Governor Orders Flags to Half-Staff</h1><p>The Governor ordered flags to half-staff in honor of former Governor Jane Doe, who served the state.</p><p>Flags will be at half-staff from August 25, 2026 until sunset on September 1, 2026.</p>' });
+  const order = parseNewsroomRelease({ source, url: "https://example.gov/news/flags-half-staff", html: '<h1>Governor Orders Flags to Half-Staff</h1><p>The Governor ordered flags to half-staff in honor of former Governor Jane Doe, who served the state.</p><p>Flags will be at half-staff from sunrise on August 25, 2026 until sunset on September 1, 2026.</p>' });
   assert.equal(order?.status, "published");
   assert.equal(order?.reason, "former Governor Jane Doe");
   assert.equal(order?.effectiveStart, "2026-08-25");
   assert.equal(order?.effectiveEnd, "2026-09-01");
+  assert.match(order?.effectiveStartTime || "", /^\d{2}:\d{2}$/);
+  assert.match(order?.effectiveEndTime || "", /^\d{2}:\d{2}$/);
 });
 
 test("parses newsroom dates without repeated years and sunset wording", () => {
   const order = parseNewsroomRelease({ source: { ...source, jurisdictionId: "nm", jurisdictionName: "New Mexico", stateCode: "NM" }, url: "https://example.gov/news/nm", html: '<div>Jun 5, 2025 · Office of the Governor</div><h1>Governor orders flags to half-staff</h1><p>All flags are to half-staff beginning June 5, and lasting through sundown of June 10, in mourning for Officer Timothy Ontiveros of the Bloomfield Police Department.</p>' });
-  assert.equal(order?.status, "published");
+  assert.equal(order?.status, "needs_review");
   assert.equal(order?.effectiveStart, "2025-06-05");
   assert.equal(order?.effectiveEnd, "2025-06-10");
 });

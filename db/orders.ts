@@ -23,6 +23,7 @@ function mapOrder(row: { orders: typeof orders.$inferSelect; jurisdictions: type
     instructionType: row.orders.instructionType as HalfMastOrder["instructionType"],
     status: row.orders.status,
     createdAt: asIso(row.orders.createdAt)!,
+    effectiveStartTime: row.orders.effectiveStartTime || undefined,
     effectiveEndTime: row.orders.effectiveEndTime || undefined,
     effectiveEndCondition: row.orders.effectiveEndCondition as HalfMastOrder["effectiveEndCondition"],
     timeZone: row.orders.timeZone as HalfMastOrder["timeZone"],
@@ -33,7 +34,7 @@ export async function listActiveOrders(db: Database, date: string) {
   const rows = await db.select().from(orders)
     .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
     .where(and(eq(orders.status, "published"), lte(orders.effectiveStart, date), or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, date))));
-  return rows.map(mapOrder);
+  return rows.map(mapOrder).filter((order) => Boolean(order.effectiveStartTime && order.effectiveEnd && order.effectiveEndTime));
 }
 
 export async function upsertJurisdiction(db: Database, jurisdiction: Jurisdiction) {
@@ -96,12 +97,12 @@ export async function upsertOrder(db: Database, order: HalfMastOrder) {
     id: order.id, title: order.title, reason: order.reason, issuingAuthority: order.issuingAuthority,
     jurisdictionId: order.jurisdiction.id, flagTypes: order.flagTypes, scope: order.scope,
     instructionType: order.instructionType, instructionText: order.instructionText,
-    effectiveStart: order.effectiveStart, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
+    effectiveStart: order.effectiveStart, effectiveStartTime: order.effectiveStartTime, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
     effectiveEndCondition: order.effectiveEndCondition, timeZone: order.timeZone, sourceUrl: order.sourceUrl,
     sourceSnapshotId: order.sourceSnapshotId, status: order.status, createdAt: asDate(order.createdAt)!,
   }).onConflictDoUpdate({ target: orders.id, set: {
     title: order.title, reason: order.reason, instructionType: order.instructionType, instructionText: order.instructionText,
-    effectiveStart: order.effectiveStart, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
+    effectiveStart: order.effectiveStart, effectiveStartTime: order.effectiveStartTime, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
     effectiveEndCondition: order.effectiveEndCondition, timeZone: order.timeZone, sourceSnapshotId: order.sourceSnapshotId, status: order.status,
     updatedAt: new Date(),
   }});

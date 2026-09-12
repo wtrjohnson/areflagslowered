@@ -29,6 +29,7 @@ export type HalfMastOrder = {
   instructionType: "order" | "request" | "unknown";
   instructionText: string;
   effectiveStart: string;
+  effectiveStartTime?: string;
   effectiveEnd?: string;
   effectiveEndTime?: string;
   effectiveEndCondition?: "sunset" | "noon" | "midnight" | "clock";

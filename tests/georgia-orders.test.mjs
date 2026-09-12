@@ -9,7 +9,7 @@ test("discovers Georgia flag-order PDFs", () => {
 
 test("parses Georgia executive-order text", () => {
   const order = parseGeorgiaFlagOrder({ title: "Lowering flags to half-staff", url: "https://gov.georgia.gov/order.pdf", text: "FLAGS ON ALL STATE BUILDINGS ORDERED LOWERED TO HALF-STAFF. In honor and memory of Sgt. Christopher Fisher. It is hereby ordered that the flags be flown at half-staff on Friday, September 4, 2026." });
-  assert.equal(order?.status, "published");
+  assert.equal(order?.status, "needs_review");
   assert.equal(order?.effectiveStart, "2026-09-04");
   assert.equal(order?.effectiveEnd, "2026-09-04");
 });
@@ -17,6 +17,13 @@ test("parses Georgia executive-order text", () => {
 test("parses observance language", () => {
   const order = parseGeorgiaFlagOrder({ title: "Lowering flags to half-staff", url: "https://gov.georgia.gov/order.pdf", text: "It is hereby ordered that flags be flown at half-staff on Friday, September 11, 2026, in observance of Patriot Day." });
   assert.equal(order?.reason, "Patriot Day");
+});
+
+test("converts Georgia sunrise and sunset into exact local times", () => {
+  const order = parseGeorgiaFlagOrder({ title: "Lowering flags to half-staff", url: "https://gov.georgia.gov/order.pdf", text: "It is hereby ordered that flags be flown at half-staff from sunrise on September 11, 2026, until sunset on September 11, 2026, in observance of Patriot Day." });
+  assert.equal(order?.status, "published");
+  assert.match(order?.effectiveStartTime || "", /^\d{2}:\d{2}$/);
+  assert.match(order?.effectiveEndTime || "", /^\d{2}:\d{2}$/);
 });
 
 test("parses scanned Georgia order wording with date before half-staff", () => {

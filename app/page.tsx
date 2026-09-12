@@ -18,8 +18,11 @@ function statusWord(status: StatusAnswer["status"]) {
 }
 
 function dateText(order: FlagResult["orders"][number]) {
-  if (!order.effectiveEnd || order.effectiveEnd === order.effectiveStart) return `On ${order.effectiveStart}`;
-  return `Until ${order.effectiveEnd}${order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : ""}`;
+  const start = `${order.effectiveStart}${order.effectiveStartTime ? ` at ${order.effectiveStartTime}` : ""}`;
+  if (!order.effectiveEnd) return `From ${start} until further notice`;
+  const end = `${order.effectiveEnd}${order.effectiveEndTime ? ` at ${order.effectiveEndTime}` : order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : ""}`;
+  if (order.effectiveEnd === order.effectiveStart && order.effectiveStartTime && order.effectiveEndTime) return `On ${order.effectiveStart} from ${order.effectiveStartTime} to ${order.effectiveEndTime}`;
+  return order.effectiveEnd === order.effectiveStart ? `On ${start} through ${end}` : `From ${start} through ${end}`;
 }
 
 function fallbackAnswer(state: Jurisdiction, date: string) {
