@@ -9,6 +9,7 @@ a { color: inherit; text-underline-offset: 4px; }
 .masthead { display: flex; justify-content: center; align-items: baseline; gap: 12px; }
 .brand, .brand-answer { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 400; letter-spacing: -.07em; }
 .brand-answer { color: var(--accent); letter-spacing: -.06em; }
+.status-full_mast .brand-answer { color: #185adb; }
 .status-uncertain .brand-answer { color: var(--warning); }
 .hero { margin: 34px auto 0; max-width: 930px; }
 .flag-heading { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; align-items: center; }
@@ -37,6 +38,7 @@ a { color: inherit; text-underline-offset: 4px; }
 .flag-name { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.035em; }
 .flag-status { margin: 0; color: var(--muted); font-size: 15px; }
 .flag-half_mast .flag-status { color: var(--accent); }
+.status-full_mast .flag-full_mast .flag-status { color: #185adb; }
 .flag-uncertain .flag-status { color: var(--warning); }
 .status-copy { margin-top: 16px; text-align: center; }
 .status-explanation { margin: 0; font-size: clamp(20px, 2.5vw, 29px); line-height: 1.08; letter-spacing: -.06em; }

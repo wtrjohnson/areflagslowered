@@ -87,7 +87,7 @@ export default function Home() {
 
         <div className="status-copy">
           <p className="status-explanation">{explanation}</p>
-          <p className="reason"><strong>Why?</strong> <span>{reason || "No current official order found."}</span></p>
+          {answer.status !== "full_mast" && <p className="reason"><strong>Why?</strong> <span>{reason || "No current official order found."}</span></p>}
           {leadOrder && <p className="timing">{dateText(leadOrder)}</p>}
           <div className="meta-row">
             <span>{loading ? "Checking official sources…" : `Checked ${new Date(answer.lastCheckedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`}</span>
