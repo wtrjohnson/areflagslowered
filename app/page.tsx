@@ -27,13 +27,12 @@ function fallbackAnswer(state: Jurisdiction, date: string) {
 
 export default function Home() {
   const [selectedState, setSelectedState] = useState(defaultState);
-  const [date, setDate] = useState(today);
   const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(defaultState, today));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
-    const params = new URLSearchParams({ location: selectedState.name, state: selectedState.stateCode || "", date });
+    const params = new URLSearchParams({ location: selectedState.name, state: selectedState.stateCode || "", date: today });
     fetch(`/api/status?${params}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Status unavailable");
@@ -42,11 +41,11 @@ export default function Home() {
       .then(setAnswer)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setAnswer(fallbackAnswer(selectedState, date));
+        setAnswer(fallbackAnswer(selectedState, today));
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, [selectedState, date]);
+  }, [selectedState]);
 
   const usResult = answer.flagResults.find((result) => result.flagType === "us");
   const stateResult = answer.flagResults.find((result) => result.flagType === "state");
@@ -97,16 +96,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="controls" aria-label="Status controls">
-        <label htmlFor="date">Check another date</label>
-        <input id="date" type="date" value={date} onChange={(event) => { setLoading(true); setDate(event.target.value); }} />
-        {date !== today && <button type="button" onClick={() => { setLoading(true); setDate(today); }}>Back to today</button>}
-      </section>
-
-      <footer>
-        <p>{answer.coverageNotice}</p>
-        <a href="/api/status?all=true&format=text">View all jurisdictions ↗</a>
-      </footer>
     </main>
   );
 }
