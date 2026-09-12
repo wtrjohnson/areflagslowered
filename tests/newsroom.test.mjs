@@ -32,3 +32,10 @@ test("parses a sunrise-to-sunset single-day order", () => {
   assert.equal(order?.effectiveStart, "2024-06-28");
   assert.equal(order?.effectiveEnd, "2024-06-28");
 });
+
+test("converts sunrise as an exact ending boundary", () => {
+  const order = parseNewsroomRelease({ source: { ...source, jurisdictionId: "pa", jurisdictionName: "Pennsylvania", stateCode: "PA" }, url: "https://www.pa.gov/news/flags", html: '<h1>Flags at Half-Staff</h1><p>Flags will be at half-staff from sunset on September 11, 2026, until sunrise on September 12, 2026, in memory of the lives lost.</p>' });
+  assert.equal(order?.status, "published");
+  assert.equal(order?.effectiveEnd, "2026-09-12");
+  assert.match(order?.effectiveEndTime || "", /^\d{2}:\d{2}$/);
+});

@@ -29,15 +29,15 @@ export function parseGeorgiaFlagOrder({ text, url, title, retrievedAt = new Date
   if (!/half[- ]staff/i.test(content)) return undefined;
   const searchable = `${content} ${clean(title)}`;
   const reason = searchable.match(/(?:in honor and memory of|in honor of|in memory of|in observance of)\s+([\s\S]{5,220}?)(?=\.|\s+It is|\s+This order|$)/i)?.[1]?.trim();
-  const range = content.match(/half[- ]staff[^.]{0,180}?\b(?:on|from)\s+(?:[A-Z][a-z]+,\s+)?([A-Z][a-z]+ \d{1,2}, \d{4})(?:[^.]{0,120}?until\s+(?:sunset on |at )?([A-Z][a-z]+ \d{1,2}, \d{4}))?/i);
+  const range = content.match(/half[- ]staff[^.]{0,180}?\b(?:on|from)\s+(?:[A-Z][a-z]+,\s+)?([A-Z][a-z]+ \d{1,2}, \d{4})(?:[^.]{0,120}?until\s+(?:(?:sunrise|sunset|sundown) on |at )?([A-Z][a-z]+ \d{1,2}, \d{4}))?/i);
   const directiveDate = content.match(/([A-Z][a-z]+ \d{1,2}, \d{4})[^.]{0,180}?half[- ]staff/i)?.[1];
   const effectiveStart = dateValue(directiveDate || range?.[1] || "");
   const effectiveEnd = range?.[2] ? dateValue(range[2]) : effectiveStart;
   const effectiveStartTime = effectiveStart && (/\bsunrise\b/i.test(content) ? solarTime(effectiveStart, "sunrise", "America/New_York", "GA") : normalizeClockTime(content.match(/(?:at|from|beginning at)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]));
-  const effectiveEndTime = effectiveEnd && (/sunset|sundown/i.test(content) ? solarTime(effectiveEnd, "sunset", "America/New_York", "GA") : normalizeClockTime(content.match(/(?:until|through|to)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]));
+  const effectiveEndTime = effectiveEnd && (/sunrise/i.test(content) ? solarTime(effectiveEnd, "sunrise", "America/New_York", "GA") : /sunset|sundown/i.test(content) ? solarTime(effectiveEnd, "sunset", "America/New_York", "GA") : normalizeClockTime(content.match(/(?:until|through|to)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]));
   if (!reason || !effectiveStart || !effectiveEnd) return undefined;
   const completeTiming = Boolean(effectiveStartTime && effectiveEndTime);
   const contentHash = `ga-order-${content.length}-${content.slice(0, 64).replace(/\W/g, "")}`;
   const snapshot: SourceSnapshot = { id: contentHash, sourceId: "ga-executive-orders", url, retrievedAt, contentHash, content, parserStatus: "parsed" };
-  return { id: `ga-${contentHash}`, title, reason, issuingAuthority: "The Governor of Georgia", jurisdiction: { id: "ga", name: "Georgia", stateCode: "GA", level: "state" }, flagTypes: ["us", "state"], scope: "statewide", instructionType: "order", instructionText: content, effectiveStart, effectiveStartTime, effectiveEnd, effectiveEndTime, effectiveEndCondition: /sunset|sundown/i.test(content) ? "sunset" : "clock", timeZone: "America/New_York", sourceUrl: url, sourceSnapshotId: snapshot.id, status: completeTiming ? "published" : "needs_review", createdAt: retrievedAt, snapshot };
+  return { id: `ga-${contentHash}`, title, reason, issuingAuthority: "The Governor of Georgia", jurisdiction: { id: "ga", name: "Georgia", stateCode: "GA", level: "state" }, flagTypes: ["us", "state"], scope: "statewide", instructionType: "order", instructionText: content, effectiveStart, effectiveStartTime, effectiveEnd, effectiveEndTime, effectiveEndCondition: /sunrise/i.test(content) ? "sunrise" : /sunset|sundown/i.test(content) ? "sunset" : "clock", timeZone: "America/New_York", sourceUrl: url, sourceSnapshotId: snapshot.id, status: completeTiming ? "published" : "needs_review", createdAt: retrievedAt, snapshot };
 }

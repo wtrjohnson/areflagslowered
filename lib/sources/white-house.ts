@@ -27,7 +27,7 @@ function parseDate(value: string) {
 }
 
 function findEnd(text: string) {
-  const match = text.match(/until\s+(?:sunset,?\s+)?(?:(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))\s+on\s+)?([A-Z][a-z]+\s+\d{1,2},\s+\d{4})/i)
+  const match = text.match(/until\s+(?:(sunset|sunrise|sundown),?\s+)?(?:(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))\s+on\s+)?([A-Z][a-z]+\s+\d{1,2},\s+\d{4})/i)
     ?? text.match(/until\s+(noon|midnight)\s+(?:on\s+)?([A-Z][a-z]+\s+\d{1,2},\s+\d{4})/i);
   if (!match) {
     const timeOnly = text.match(/until\s+(noon|midnight)/i);
@@ -39,10 +39,10 @@ function findEnd(text: string) {
     if (!date) return undefined;
     return { date, time: timeOnly[1].toLowerCase() === "noon" ? "12:00" : "00:00", condition: timeOnly[1].toLowerCase() === "noon" ? "noon" : "midnight", text: timeOnly[0] };
   }
-  const date = parseDate(match[2]);
+  const date = parseDate(match[3]);
   if (!date) return undefined;
-  const time = match[1]?.toLowerCase() === "noon" ? "12:00" : match[1]?.toLowerCase() === "midnight" ? "00:00" : normalizeClockTime(match[1]);
-  const condition = /sunset/i.test(match[0]) ? "sunset" : /noon/i.test(match[0]) ? "noon" : /midnight/i.test(match[0]) ? "midnight" : "clock";
+  const time = normalizeClockTime(match[2]);
+  const condition = /sunrise/i.test(match[0]) ? "sunrise" : /sunset|sundown/i.test(match[0]) ? "sunset" : /noon/i.test(match[0]) ? "noon" : /midnight/i.test(match[0]) ? "midnight" : "clock";
   return { date, time, condition, text: match[0] };
 }
 
@@ -86,7 +86,7 @@ export function parseWhiteHouseProclamation({ html, url, retrievedAt = new Date(
   const end = findEnd(text);
   const startContext = text.slice(0, Math.max(0, text.search(/half[\u2010-\u2015 -]*(?:staff|mast)/i)));
   const effectiveStartTime = effectiveStart && (/\bsunrise\b/i.test(startContext) ? solarTime(effectiveStart, "sunrise", "America/New_York") : normalizeClockTime(startContext.match(/(?:at|from|beginning at)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))/i)?.[1]));
-  const effectiveEndTime = end?.date && (/sunset/i.test(end.text) ? solarTime(end.date, "sunset", "America/New_York") : end.time);
+  const effectiveEndTime = end?.date && (/sunrise/i.test(end.text) ? solarTime(end.date, "sunrise", "America/New_York") : /sunset|sundown/i.test(end.text) ? solarTime(end.date, "sunset", "America/New_York") : end.time);
   const hasInstruction = /(?:hereby order|request(?:s|ed)?|direct(?:s|ed)?).{0,360}(?:half[\u2010-\u2015 -]*staff|half[\u2010-\u2015 -]*mast)/i.test(text);
   const contentHash = `sha256-${text.length}-${text.slice(0, 32).replace(/\W/g, "")}`;
   const snapshot: SourceSnapshot = { id: `white-house-${contentHash}`, sourceId: "white-house-presidential-actions", url, retrievedAt, contentHash, content: html, parserStatus: hasInstruction && effectiveStart && end ? "parsed" : "changed" };
@@ -109,7 +109,7 @@ export function parseWhiteHouseProclamation({ html, url, retrievedAt = new Date(
     effectiveStartTime,
     effectiveEnd: end.date,
     effectiveEndTime,
-    effectiveEndCondition: /sunset/i.test(end.text) ? "sunset" : end.condition,
+    effectiveEndCondition: /sunrise/i.test(end.text) ? "sunrise" : /sunset|sundown/i.test(end.text) ? "sunset" : end.condition,
     timeZone: "local",
     sourceUrl: url,
     sourceSnapshotId: snapshot.id,

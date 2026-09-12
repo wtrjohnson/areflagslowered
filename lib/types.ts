@@ -32,7 +32,7 @@ export type HalfMastOrder = {
   effectiveStartTime?: string;
   effectiveEnd?: string;
   effectiveEndTime?: string;
-  effectiveEndCondition?: "sunset" | "noon" | "midnight" | "clock";
+  effectiveEndCondition?: "sunrise" | "sunset" | "noon" | "midnight" | "clock";
   timeZone?: "local" | "UTC";
   sourceUrl: string;
   sourceSnapshotId: string;

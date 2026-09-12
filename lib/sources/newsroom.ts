@@ -48,7 +48,7 @@ export function parseNewsroomRelease({ html, url, source, retrievedAt = new Date
   const startClock = periodText.match(/(?:beginning|starting|effective|from)[\s\S]{0,80}?\b(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))\b/i)?.[1];
   const endClock = periodText.match(/(?:until|through|to)[\s\S]{0,80}?\b(\d{1,2}(?::\d{2})?\s*(?:a\.m\.|p\.m\.|am|pm))\b/i)?.[1];
   const effectiveStartTime = /sunrise/i.test(periodText) ? solarTime(effectiveStart, "sunrise", source.timeZone, source.stateCode) : normalizeClockTime(startClock);
-  const effectiveEndTime = effectiveEnd && (/sunset|sundown/i.test(periodText) ? solarTime(effectiveEnd, "sunset", source.timeZone, source.stateCode) : normalizeClockTime(endClock));
+  const effectiveEndTime = effectiveEnd && (/sunrise/i.test(periodText) ? solarTime(effectiveEnd, "sunrise", source.timeZone, source.stateCode) : /sunset|sundown/i.test(periodText) ? solarTime(effectiveEnd, "sunset", source.timeZone, source.stateCode) : normalizeClockTime(endClock));
   const contentHash = `${source.sourceId}-${text.length}-${text.slice(0, 80).replace(/\W/g, "")}`;
   const completeTiming = Boolean(effectiveStartTime && effectiveEnd && effectiveEndTime);
   const snapshot: SourceSnapshot = { id: contentHash, sourceId: source.sourceId, url, retrievedAt, contentHash, content: html, parserStatus: completeTiming ? "parsed" : "changed" };
@@ -66,7 +66,7 @@ export function parseNewsroomRelease({ html, url, source, retrievedAt = new Date
     effectiveStartTime,
     effectiveEnd,
     effectiveEndTime,
-    effectiveEndCondition: /sunset/i.test(periodText) ? "sunset" : "clock",
+    effectiveEndCondition: /sunrise/i.test(periodText) ? "sunrise" : /sunset|sundown/i.test(periodText) ? "sunset" : "clock",
     timeZone: source.timeZone as HalfMastOrder["timeZone"],
     sourceUrl: url,
     sourceSnapshotId: snapshot.id,
