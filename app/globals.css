@@ -18,9 +18,9 @@ a { color: inherit; text-underline-offset: 4px; }
 .chevron { position: absolute; right: 4px; top: -4px; pointer-events: none; font-size: 31px; font-weight: 300; }
 .flags { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; }
 .flag-display { min-width: 0; }
-.flag-stage { height: 255px; position: relative; }
-.flag-pole { position: absolute; left: 15px; top: 18px; bottom: 14px; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
-.flag-cloth { position: absolute; left: 23px; top: 75px; width: min(64%, 270px); aspect-ratio: 1.9 / 1; background: var(--ink); box-shadow: 0 5px 0 rgba(17,17,17,.06); }
+.flag-stage { height: 270px; position: relative; }
+.flag-pole { position: absolute; left: 15px; top: 0; bottom: 10px; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
+.flag-cloth { position: absolute; left: 23px; top: 8px; width: min(64%, 270px); aspect-ratio: 1.9 / 1; background: var(--ink); box-shadow: 0 5px 0 rgba(17,17,17,.06); }
 .flag-us .flag-cloth { background: repeating-linear-gradient(to bottom, #151515 0 10%, #f1f1ed 10% 20%); }
 .flag-us .flag-cloth::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 34%; background: #151515; }
 .flag-cloth span { position: relative; z-index: 1; display: block; height: 20%; border-bottom: 1px solid rgba(255,255,255,.28); }
@@ -30,9 +30,9 @@ a { color: inherit; text-underline-offset: 4px; }
 .flag-state-OK .flag-cloth::after { content: ""; position: absolute; left: 50%; top: 50%; width: 25%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: #e9e4d8; box-shadow: 0 0 0 7px #b9272e, 0 0 0 13px #e9e4d8; }
 .flag-state-OK .flag-cloth::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9%; height: 36%; transform: translate(-50%, -50%); background: #b9272e; z-index: 1; }
 .flag-state .flag-cloth::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 49%, rgba(255,255,255,.16) 50%, transparent 51%); }
-.flag-half_mast .flag-cloth { top: 98px; }
-.flag-full_mast .flag-cloth { top: 75px; }
-.flag-uncertain .flag-cloth { top: 87px; opacity: .45; border: 2px dashed var(--warning); background: transparent; }
+.flag-half_mast .flag-cloth { top: 110px; }
+.flag-full_mast .flag-cloth { top: 8px; }
+.flag-uncertain .flag-cloth { top: 58px; opacity: .45; border: 2px dashed var(--warning); background: transparent; }
 .flag-uncertain .flag-cloth::after { display: none; }
 .flag-name { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.035em; }
 .flag-status { margin: 0; color: var(--muted); font-size: 15px; }
@@ -52,11 +52,11 @@ a { color: inherit; text-underline-offset: 4px; }
   .hero { margin-top: 72px; }
   .flag-heading, .flags { gap: 28px; }
   .flag-stage { height: 225px; }
-  .flag-pole { left: 8px; top: 20px; bottom: 15px; width: 6px; }
-  .flag-cloth { left: 14px; top: 72px; width: min(78%, 210px); aspect-ratio: 1.9 / 1; }
-  .flag-half_mast .flag-cloth { top: 84px; }
-  .flag-full_mast .flag-cloth { top: 72px; }
-  .flag-uncertain .flag-cloth { top: 78px; }
+  .flag-pole { left: 8px; top: 0; bottom: 12px; width: 6px; }
+  .flag-cloth { left: 14px; top: 6px; width: min(78%, 210px); aspect-ratio: 1.9 / 1; }
+  .flag-half_mast .flag-cloth { top: 86px; }
+  .flag-full_mast .flag-cloth { top: 6px; }
+  .flag-uncertain .flag-cloth { top: 48px; }
   .flag-cloth span { border-bottom-width: 1px; }
   .status-copy { margin-top: 24px; }
 }
