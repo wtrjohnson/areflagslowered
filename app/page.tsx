@@ -50,7 +50,7 @@ export default function Home() {
   const usResult = answer.flagResults.find((result) => result.flagType === "us");
   const stateResult = answer.flagResults.find((result) => result.flagType === "state");
   const leadOrder = usResult?.orders[0] || stateResult?.orders[0];
-  const reason = leadOrder?.reason || (usResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : usResult?.explanation);
+  const reason = leadOrder?.reason || (stateResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : stateResult?.status === "half_mast" ? stateResult.explanation : usResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : usResult?.explanation);
   const sourceUrl = leadOrder?.sourceUrl || answer.sourceLinks[0];
   const explanation = (() => {
     if (usResult?.status === "half_mast" && stateResult?.status === "half_mast") return "All flags to be flown at half-mast";
@@ -82,7 +82,7 @@ export default function Home() {
 
         <div className="flags" aria-label="Current flag positions">
           <FlagDisplay result={usResult} kind="us" />
-          <FlagDisplay result={stateResult} kind="state" stateName={selectedState.name} />
+          <FlagDisplay result={stateResult} kind="state" stateName={selectedState.name} stateCode={selectedState.stateCode} />
         </div>
 
         <div className="status-copy">
@@ -100,10 +100,10 @@ export default function Home() {
   );
 }
 
-function FlagDisplay({ result, kind, stateName }: { result?: FlagResult; kind: "us" | "state"; stateName?: string }) {
+function FlagDisplay({ result, kind, stateName, stateCode }: { result?: FlagResult; kind: "us" | "state"; stateName?: string; stateCode?: string }) {
   const status = result?.status || "uncertain";
   return (
-    <article className={`flag-display flag-${kind} flag-${status}`}>
+    <article className={`flag-display flag-${kind} flag-${status} ${stateCode ? `flag-state-${stateCode}` : ""}`}>
       <div className="flag-stage" aria-hidden="true">
         <div className="flag-pole" />
         <div className="flag-cloth"><span /><span /><span /><span /><span /></div>
