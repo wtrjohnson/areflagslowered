@@ -7,6 +7,7 @@ import type { StatusAnswer, FlagResult, Jurisdiction } from "../lib/types.ts";
 
 const today = new Date().toISOString().slice(0, 10);
 const defaultState = jurisdictionCatalog.find((value) => value.stateCode === "VA")!;
+type MenuStatus = "half_mast" | "full_mast" | "below_us" | "uncertain";
 
 function statusLabel(status: FlagResult["status"]) {
   return status === "half_mast" ? "Half-mast" : status === "below_us" ? "Below U.S. flag" : status === "uncertain" ? "Needs review" : "Full mast";
@@ -25,10 +26,15 @@ function fallbackAnswer(state: Jurisdiction, date: string) {
   return answerStatus({ location: state.name, stateCode: state.stateCode, date, checkedAt: `${today}T12:00:00.000Z` });
 }
 
+function menuStatusLabel(status: MenuStatus) {
+  return status === "half_mast" ? "Half-mast" : status === "below_us" ? "Below U.S." : status === "uncertain" ? "Review" : "Full mast";
+}
+
 export default function Home() {
   const [selectedState, setSelectedState] = useState(defaultState);
   const [stateOpen, setStateOpen] = useState(false);
   const [activeStateIndex, setActiveStateIndex] = useState(() => jurisdictionCatalog.findIndex((state) => state.id === defaultState.id));
+  const [menuStatuses, setMenuStatuses] = useState<Record<string, MenuStatus>>({});
   const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(defaultState, today));
   const [loading, setLoading] = useState(true);
   const statePickerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +45,22 @@ export default function Home() {
     };
     document.addEventListener("pointerdown", closeOnOutsideClick);
     return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/status?all=true", { signal: AbortSignal.timeout(10000) })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Status list unavailable");
+        return response.json() as Promise<{ statuses: Array<{ jurisdiction: { id: string }; status: { flagType: string; status: MenuStatus } }> }>;
+      })
+      .then((payload) => {
+        const nextStatuses: Record<string, MenuStatus> = {};
+        for (const row of payload.statuses) {
+          if (row.status.flagType === "state") nextStatuses[row.jurisdiction.id] = row.status.status;
+        }
+        setMenuStatuses(nextStatuses);
+      })
+      .catch(() => setMenuStatuses({}));
   }, []);
 
   useEffect(() => {
@@ -118,7 +140,7 @@ export default function Home() {
                 key={state.id}
                 onMouseEnter={() => setActiveStateIndex(index)}
                 onClick={() => { setLoading(true); setSelectedState(state); setActiveStateIndex(index); setStateOpen(false); }}
-              ><span>{state.name}</span><small>{state.stateCode}</small></button>)}
+              ><span>{state.name}</span><span className="state-option-meta"><small>{state.stateCode}</small>{menuStatuses[state.id] && <span className={`state-menu-status state-menu-${menuStatuses[state.id]}`}><i aria-hidden="true" />{menuStatusLabel(menuStatuses[state.id])}</span>}</span></button>)}
             </div>}
           </div>
         </div>
