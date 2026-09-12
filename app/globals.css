@@ -15,8 +15,14 @@ a { color: inherit; text-underline-offset: 4px; }
 .flag-heading { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; align-items: center; }
 .flag-heading h2, .state-picker select { margin: 0; font-size: clamp(24px, 3vw, 35px); font-weight: 400; letter-spacing: -.065em; }
 .state-picker { position: relative; display: block; }
-.state-picker select { appearance: none; width: 100%; border: 0; background: transparent; color: var(--ink); cursor: pointer; padding: 0 34px 0 0; }
+.state-trigger { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; padding: 0 34px 0 0; background: transparent; color: var(--ink); cursor: pointer; text-align: left; font-size: clamp(24px, 3vw, 35px); font-weight: 400; letter-spacing: -.065em; }
 .chevron { position: absolute; right: 4px; top: -4px; pointer-events: none; font-size: 31px; font-weight: 300; }
+.state-trigger:focus-visible { outline: 2px solid #185adb; outline-offset: 6px; }
+.state-menu { position: absolute; z-index: 10; top: calc(100% + 12px); right: 0; width: min(100%, 330px); max-height: 320px; overflow-y: auto; border: 1px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 rgba(17,17,17,.1); padding: 6px; }
+.state-option { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; padding: 10px 12px; background: transparent; color: var(--ink); cursor: pointer; font-size: 16px; text-align: left; }
+.state-option small { color: var(--muted); font-size: 11px; letter-spacing: .08em; }
+.state-option:hover, .state-option.active { background: #e7edf8; }
+.state-option.selected { color: #185adb; font-weight: 700; }
 .flags { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; }
 .flag-display { min-width: 0; }
 .flag-stage { height: 270px; position: relative; }

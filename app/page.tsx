@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { answerStatus } from "../lib/answer-engine.ts";
 import { jurisdictionCatalog } from "../lib/jurisdictions.ts";
 import type { StatusAnswer, FlagResult, Jurisdiction } from "../lib/types.ts";
@@ -27,8 +27,19 @@ function fallbackAnswer(state: Jurisdiction, date: string) {
 
 export default function Home() {
   const [selectedState, setSelectedState] = useState(defaultState);
+  const [stateOpen, setStateOpen] = useState(false);
+  const [activeStateIndex, setActiveStateIndex] = useState(() => jurisdictionCatalog.findIndex((state) => state.id === defaultState.id));
   const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(defaultState, today));
   const [loading, setLoading] = useState(true);
+  const statePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (statePickerRef.current && !statePickerRef.current.contains(event.target as Node)) setStateOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,13 +82,45 @@ export default function Home() {
         <h1 id="status-heading" className="sr-only">Current flag status</h1>
         <div className="flag-heading">
           <h2>United States</h2>
-          <label className="state-picker">
+          <div className="state-picker" ref={statePickerRef}>
             <span className="sr-only">Choose a state</span>
-            <select value={selectedState.stateCode} onChange={(event) => { setLoading(true); setSelectedState(jurisdictionCatalog.find((state) => state.stateCode === event.target.value) || defaultState); }}>
-              {jurisdictionCatalog.map((state) => <option key={state.id} value={state.stateCode}>{state.name}</option>)}
-            </select>
-            <span className="chevron" aria-hidden="true">⌄</span>
-          </label>
+            <button
+              type="button"
+              className="state-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={stateOpen}
+              aria-controls="state-listbox"
+              onClick={() => { setActiveStateIndex(jurisdictionCatalog.findIndex((state) => state.id === selectedState.id)); setStateOpen((open) => !open); }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") { setStateOpen(false); return; }
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const direction = event.key === "ArrowDown" ? 1 : -1;
+                  setStateOpen(true);
+                  setActiveStateIndex((index) => (index + direction + jurisdictionCatalog.length) % jurisdictionCatalog.length);
+                }
+                if ((event.key === "Enter" || event.key === " ") && stateOpen) {
+                  event.preventDefault();
+                  const nextState = jurisdictionCatalog[activeStateIndex];
+                  setLoading(true); setSelectedState(nextState); setStateOpen(false);
+                }
+              }}
+            >
+              <span>{selectedState.name}</span><span className="chevron" aria-hidden="true">⌄</span>
+            </button>
+            {stateOpen && <div id="state-listbox" className="state-menu" role="listbox" aria-label="Choose a state">
+              {jurisdictionCatalog.map((state, index) => <button
+                type="button"
+                role="option"
+                id={`state-option-${state.id}`}
+                className={`state-option ${state.id === selectedState.id ? "selected" : ""} ${index === activeStateIndex ? "active" : ""}`}
+                aria-selected={state.id === selectedState.id}
+                key={state.id}
+                onMouseEnter={() => setActiveStateIndex(index)}
+                onClick={() => { setLoading(true); setSelectedState(state); setActiveStateIndex(index); setStateOpen(false); }}
+              ><span>{state.name}</span><small>{state.stateCode}</small></button>)}
+            </div>}
+          </div>
         </div>
 
         <div className="flags" aria-label="Current flag positions">
