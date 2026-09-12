@@ -51,6 +51,13 @@ export function answerStatus({
     const matchingOrders = applicableOrders.filter((order) =>
       order.flagTypes.includes(flagType),
     );
+    const datedOrdersOnDate = orderRecords.filter((order) =>
+      order.flagTypes.includes(flagType) &&
+      appliesToState(order, stateCode) &&
+      order.status === "published" &&
+      order.effectiveStart <= date &&
+      (!order.effectiveEnd || order.effectiveEnd >= date),
+    );
     const label = flagType === "us" ? "U.S. flag" : "State flag";
     const halfMast = matchingOrders.length > 0;
     const federalHalfMast = flagType === "state" && applicableOrders.some((order) => order.flagTypes.includes("us"));
@@ -58,7 +65,7 @@ export function answerStatus({
     // A dated order is the strongest evidence for the requested date. A
     // persisted status-page value is only a fallback when no applicable order
     // was found; otherwise a stale status page can contradict the order.
-    const resolvedStatus = halfMast ? "half_mast" : storedStatus || (federalHalfMast ? "below_us" : "full_mast");
+    const resolvedStatus = halfMast ? "half_mast" : datedOrdersOnDate.length ? "full_mast" : storedStatus || (federalHalfMast ? "below_us" : "full_mast");
     return {
       flagType,
       label,

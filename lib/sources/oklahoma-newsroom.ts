@@ -18,11 +18,14 @@ export function discoverOklahomaFlagReleases(html: string) {
 export function parseOklahomaFlagRelease({ html, url, retrievedAt = new Date().toISOString() }: { html: string; url: string; retrievedAt?: string }): (HalfMastOrder & { snapshot: SourceSnapshot }) | undefined {
   const text = clean(html);
   const title = clean(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || "Oklahoma flags at half-staff");
-  const bodyStart = [text.indexOf("has directed"), text.indexOf("has ordered"), text.indexOf("has issued")].filter((index) => index >= 0).sort((a, b) => a - b)[0] ?? 0;
-  const reason = text.slice(bodyStart).match(/(?:in honor of|to honor|to remember) ([\s\S]{8,260}?)(?:,\s+who|\.\s*(?:Flags|After|The)|$)/i)?.[1]?.trim();
-  const schedule = text.match(/from[\s\S]*/i)?.[0] || "";
+  const bodyStart = [text.indexOf("has directed"), text.indexOf("has ordered"), text.indexOf("has issued"), text.indexOf("issued Executive Order"), text.indexOf("issued an order")].filter((index) => index >= 0).sort((a, b) => a - b)[0] ?? 0;
+  const reasonStart = text.slice(bodyStart).match(/(?:in honor of|in remembrance of|to honor|to remember)\s+/i);
+  const reasonRemainder = reasonStart ? text.slice(bodyStart + reasonStart.index! + reasonStart[0].length) : "";
+  const reasonStop = reasonRemainder.search(/\.\s*(?:Flags|After|The|It is|Oklahoma)\b/i);
+  const reason = reasonStart ? (reasonStop >= 0 ? reasonRemainder.slice(0, reasonStop) : reasonRemainder.split(".")[0]).trim() : undefined;
+  const schedule = text.match(/\bfrom\s+[\s\S]*/i)?.[0] || text.match(/\bon\s+(?:(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+)?[A-Za-z]+\s+\d{1,2},\s+\d{4}[\s\S]*/i)?.[0] || "";
   const dates = [...schedule.matchAll(/([A-Za-z]+ \d{1,2}, \d{4})/g)].map((match) => match[1]);
-  const period = dates.length >= 2 ? ["", dates[0], dates[1]] : undefined;
+  const period = dates.length >= 1 ? ["", dates[0], dates[1] || dates[0]] : undefined;
   const effectiveStart = normalizedDate(period?.[1]);
   const effectiveEnd = normalizedDate(period?.[2]);
   if (!reason || !effectiveStart || !effectiveEnd) return undefined;

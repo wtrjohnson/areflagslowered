@@ -70,3 +70,15 @@ test("a dated order takes precedence over a conflicting persisted status page", 
   });
   assert.equal(answer.flagResults.find((result) => result.flagType === "state")?.status, "half_mast");
 });
+
+test("an order that ended earlier on the selected date beats stale half-mast status", () => {
+  const answer = answerStatus({
+    location: "Pennsylvania, PA",
+    stateCode: "PA",
+    date: "2026-09-08",
+    time: "07:00",
+    orderRecords: [{ ...order, id: "pa-ending-order", jurisdiction: { id: "pa", name: "Pennsylvania", stateCode: "PA", level: "state" }, flagTypes: ["us", "state"], scope: "statewide", effectiveEnd: "2026-09-08", effectiveEndTime: "06:30" }],
+    currentStatuses: [{ flagType: "state", status: "half_mast", sourceUrl: "https://www.pa.gov/flag-status" }],
+  });
+  assert.equal(answer.flagResults.find((result) => result.flagType === "state")?.status, "full_mast");
+});
