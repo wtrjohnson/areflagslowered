@@ -112,10 +112,15 @@ The primary endpoint is `GET /api/status`:
 /api/status?location=New%20York%2C%20NY&state=NY
 /api/status?location=New%20York%2C%20NY&state=NY&format=text
 /api/status?all=true&format=text
+/api/coverage
+/api/coverage?format=text
 ```
 
 Use `all=true` for a single text response containing every current federal,
 state, and territorial U.S.-flag and state-flag status.
+
+Use `/api/coverage` for source-health reporting: freshness, failures, latency,
+current-status counts, and open conflicts.
 
 Without Neon, use the local Dolly fixture to exercise an active order:
 
