@@ -55,7 +55,10 @@ export function answerStatus({
     const halfMast = matchingOrders.length > 0;
     const federalHalfMast = flagType === "state" && applicableOrders.some((order) => order.flagTypes.includes("us"));
     const storedStatus = currentStatuses?.find((status) => status.flagType === flagType)?.status;
-    const resolvedStatus = storedStatus || (halfMast ? "half_mast" : federalHalfMast ? "below_us" : "full_mast");
+    // A dated order is the strongest evidence for the requested date. A
+    // persisted status-page value is only a fallback when no applicable order
+    // was found; otherwise a stale status page can contradict the order.
+    const resolvedStatus = halfMast ? "half_mast" : storedStatus || (federalHalfMast ? "below_us" : "full_mast");
     return {
       flagType,
       label,
