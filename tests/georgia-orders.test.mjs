@@ -19,6 +19,17 @@ test("parses observance language", () => {
   assert.equal(order?.reason, "Patriot Day");
 });
 
+test("parses scanned Georgia order wording with date before half-staff", () => {
+  const order = parseGeorgiaFlagOrder({
+    title: "Lowering flags to half-staff on Friday, September 11, 2026, in observance of Patriot Day",
+    url: "https://gov.georgia.gov/order.pdf",
+    text: "That the State of Georgia recognize Friday, September 11, 2026, as Patriot Day by flying the flag of the United States of America and the flag of the State of Georgia at half-staff on all state buildings and grounds."
+  });
+  assert.equal(order?.reason, "Patriot Day");
+  assert.equal(order?.effectiveStart, "2026-09-11");
+  assert.equal(order?.effectiveEnd, "2026-09-11");
+});
+
 test("extracts embedded PDF text when Poppler is unavailable", () => {
   assert.equal(extractEmbeddedPdfText(new TextEncoder().encode("stream\n(FLAGS ON ALL STATE BUILDINGS) Tj (HALF-STAFF) Tj\nendstream")), "FLAGS ON ALL STATE BUILDINGS HALF-STAFF");
 });

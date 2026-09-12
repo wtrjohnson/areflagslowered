@@ -39,7 +39,9 @@ try {
   if (!stdout.trim()) {
     const imagePath = join(workDir, "order");
     await exec("pdftoppm", ["-png", "-f", "1", "-singlefile", pdfPath, imagePath]);
-    ({ stdout } = await exec("tesseract", [`${imagePath}.png`, "stdout"]));
+    const cleanImagePath = join(workDir, "order-clean.png");
+    await writeFile(cleanImagePath, await readFile(`${imagePath}.png`));
+    ({ stdout } = await exec("tesseract", [cleanImagePath, "stdout"]));
   }
   await rm(workDir, { recursive: true, force: true });
   const parsed = parseGeorgiaFlagOrder({ text: stdout, url: candidate.url, title: candidate.title, retrievedAt: now.toISOString() });

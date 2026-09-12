@@ -26,9 +26,11 @@ export function discoverGeorgiaFlagOrders(html: string, indexUrl = GEORGIA_ORDER
 export function parseGeorgiaFlagOrder({ text, url, title, retrievedAt = new Date().toISOString() }: { text: string; url: string; title: string; retrievedAt?: string }): (HalfMastOrder & { snapshot: SourceSnapshot }) | undefined {
   const content = clean(text);
   if (!/half[- ]staff/i.test(content)) return undefined;
-  const reason = content.match(/(?:in honor and memory of|in honor of|in memory of|in observance of)\s+([\s\S]{5,220}?)(?=\.|\s+It is|\s+This order|$)/i)?.[1]?.trim();
+  const searchable = `${content} ${clean(title)}`;
+  const reason = searchable.match(/(?:in honor and memory of|in honor of|in memory of|in observance of)\s+([\s\S]{5,220}?)(?=\.|\s+It is|\s+This order|$)/i)?.[1]?.trim();
   const range = content.match(/half[- ]staff[^.]{0,180}?\b(?:on|from)\s+(?:[A-Z][a-z]+,\s+)?([A-Z][a-z]+ \d{1,2}, \d{4})(?:[^.]{0,120}?until\s+(?:sunset on |at )?([A-Z][a-z]+ \d{1,2}, \d{4}))?/i);
-  const effectiveStart = range ? dateValue(range[1]) : undefined;
+  const directiveDate = content.match(/([A-Z][a-z]+ \d{1,2}, \d{4})[^.]{0,180}?half[- ]staff/i)?.[1];
+  const effectiveStart = dateValue(directiveDate || range?.[1] || "");
   const effectiveEnd = range?.[2] ? dateValue(range[2]) : effectiveStart;
   if (!reason || !effectiveStart || !effectiveEnd) return undefined;
   const contentHash = `ga-order-${content.length}-${content.slice(0, 64).replace(/\W/g, "")}`;
