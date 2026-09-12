@@ -57,7 +57,7 @@ export default function Home() {
     if (usResult?.status === "half_mast") return "The U.S. flag is to be flown at half-mast";
     if (stateResult?.status === "half_mast") return `${selectedState.name}'s flag is to be flown at half-mast`;
     if (answer.status === "uncertain") return "The current status needs review";
-    return "Flags to be flown at full mast";
+    return "";
   })();
 
   return (
@@ -86,7 +86,7 @@ export default function Home() {
         </div>
 
         <div className="status-copy">
-          <p className="status-explanation">{explanation}</p>
+          {explanation && <p className="status-explanation">{explanation}</p>}
           {answer.status !== "full_mast" && <p className="reason"><strong>Why?</strong> <span>{reason || "No current official order found."}</span></p>}
           {leadOrder && <p className="timing">{dateText(leadOrder)}</p>}
           <div className="meta-row">
