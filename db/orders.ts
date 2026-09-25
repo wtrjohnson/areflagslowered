@@ -27,14 +27,20 @@ function mapOrder(row: { orders: typeof orders.$inferSelect; jurisdictions: type
     effectiveEndTime: row.orders.effectiveEndTime || undefined,
     effectiveEndCondition: row.orders.effectiveEndCondition as HalfMastOrder["effectiveEndCondition"],
     timeZone: row.orders.timeZone as HalfMastOrder["timeZone"],
+    alertType: row.orders.alertType as HalfMastOrder["alertType"],
+    geographicScope: row.orders.geographicScope as HalfMastOrder["geographicScope"],
+    countyName: row.orders.countyName || undefined,
+    sourceMessageId: row.orders.sourceMessageId || undefined,
   };
 }
 
 export async function listActiveOrders(db: Database, date: string) {
   const rows = await db.select().from(orders)
     .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
-    .where(and(eq(orders.status, "published"), lte(orders.effectiveStart, date), or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, date))));
-  return rows.map(mapOrder).filter((order) => Boolean(order.effectiveStartTime && order.effectiveEnd && order.effectiveEndTime));
+    .innerJoin(sourceSnapshots, eq(orders.sourceSnapshotId, sourceSnapshots.id))
+    .innerJoin(sources, eq(sourceSnapshots.sourceId, sources.id))
+    .where(and(eq(orders.status, "published"), eq(sources.id, "american-flags-express-email"), lte(orders.effectiveStart, date), or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, date))));
+  return rows.map(mapOrder);
 }
 
 export async function upsertJurisdiction(db: Database, jurisdiction: Jurisdiction) {
@@ -47,7 +53,7 @@ export async function upsertJurisdiction(db: Database, jurisdiction: Jurisdictio
 }
 
 export async function upsertSource(db: Database, source: { id: string; jurisdictionId?: string; name: string; url: string; sourceType: string; parserName?: string; priority?: "primary" | "secondary" | "fallback"; timeZone?: string; pollIntervalMinutes?: number }) {
-  const values = { id: source.id, jurisdictionId: source.jurisdictionId, name: source.name, url: source.url, sourceType: source.sourceType, parserName: source.parserName || "unknown", priority: source.priority || "primary", timeZone: source.timeZone || "America/New_York", pollIntervalMinutes: source.pollIntervalMinutes || 30 };
+  const values = { id: source.id, jurisdictionId: source.jurisdictionId, name: source.name, url: source.url, sourceType: source.sourceType, parserName: source.parserName || "unknown", priority: source.priority || "primary", timeZone: source.timeZone || "America/New_York", pollIntervalMinutes: source.pollIntervalMinutes ?? 30 };
   await db.insert(sources).values(values)
     .onConflictDoUpdate({ target: sources.id, set: { name: source.name, url: source.url, sourceType: source.sourceType, jurisdictionId: source.jurisdictionId, parserName: values.parserName, priority: values.priority, timeZone: values.timeZone, pollIntervalMinutes: values.pollIntervalMinutes } });
 }
@@ -100,10 +106,14 @@ export async function upsertOrder(db: Database, order: HalfMastOrder) {
     effectiveStart: order.effectiveStart, effectiveStartTime: order.effectiveStartTime, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
     effectiveEndCondition: order.effectiveEndCondition, timeZone: order.timeZone, sourceUrl: order.sourceUrl,
     sourceSnapshotId: order.sourceSnapshotId, status: order.status, createdAt: asDate(order.createdAt)!,
+    alertType: order.alertType || "new", geographicScope: order.geographicScope || order.scope, countyName: order.countyName,
+    sourceMessageId: order.sourceMessageId,
   }).onConflictDoUpdate({ target: orders.id, set: {
     title: order.title, reason: order.reason, instructionType: order.instructionType, instructionText: order.instructionText,
     effectiveStart: order.effectiveStart, effectiveStartTime: order.effectiveStartTime, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
     effectiveEndCondition: order.effectiveEndCondition, timeZone: order.timeZone, sourceSnapshotId: order.sourceSnapshotId, status: order.status,
+    alertType: order.alertType || "new", geographicScope: order.geographicScope || order.scope, countyName: order.countyName,
+    sourceMessageId: order.sourceMessageId,
     updatedAt: new Date(),
   }});
 }

@@ -20,7 +20,7 @@ export function renderAllStatusesText(rows: AllStatusRow[], checkedAt = new Date
   const lines = ["ALL CURRENT FLAG STATUSES", "", ...ordered.map(({ jurisdiction, statuses }) => {
     const code = jurisdiction.stateCode ? ` (${jurisdiction.stateCode})` : "";
     return `${jurisdiction.name}${code}: U.S. flag ${statusLabel(statuses.get("us")?.status || "uncertain")} | State flag ${statusLabel(statuses.get("state")?.status || "uncertain")}`;
-  }), "", `Data checked: ${checkedAt}`, "Coverage: Coverage currently includes official U.S. federal and state/territorial orders. City, county, facility, institutional, and private-flag orders may differ."];
+  }), "", `Data checked: ${checkedAt}`, "Coverage: Current status is based solely on published American Flags Express alerts. County-specific alerts are retained for review but excluded from public state-level status."];
   return lines.join("\n");
 }
 
@@ -41,7 +41,6 @@ export function renderStatusText(answer: StatusAnswer) {
         `Where: ${order.scope === "nationwide" ? "Nationwide" : order.jurisdiction.name}`,
         `When: ${formatDate(order.effectiveStart)}${order.effectiveStartTime ? ` at ${order.effectiveStartTime}` : ""} through ${order.effectiveEnd ? `${formatDate(order.effectiveEnd)}${order.effectiveEndTime ? ` at ${order.effectiveEndTime}` : order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : ""}` : "further notice"}`,
         `Authority: ${order.issuingAuthority}`,
-        `Source: ${order.sourceUrl}`,
       ]);
       return [`${result.label}: ${status} [${indicator}]`, ...(details.length ? details : [result.explanation]), ""];
     }),

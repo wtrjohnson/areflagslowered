@@ -87,7 +87,7 @@ export default function Home() {
   const stateResult = answer.flagResults.find((result) => result.flagType === "state");
   const leadOrder = usResult?.orders[0] || stateResult?.orders[0];
   const reason = leadOrder?.reason || (stateResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : stateResult?.status === "half_mast" ? stateResult.explanation : usResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : usResult?.explanation);
-  const sourceUrl = leadOrder?.sourceUrl || answer.sourceLinks[0];
+  const sourceUrl = null;
   const explanation = (() => {
     if (usResult?.status === "half_mast" && stateResult?.status === "half_mast") return "All flags to be flown at half-mast";
     if (usResult?.status === "half_mast") return "The U.S. flag is to be flown at half-mast";

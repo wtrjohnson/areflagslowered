@@ -2,7 +2,7 @@ import { orders as defaultOrders } from "./data.ts";
 import type { FlagResult, FlagType, HalfMastOrder, StatusAnswer } from "./types.ts";
 
 const coverageNotice =
-  "Coverage currently includes official U.S. federal and state/territorial orders. City, county, facility, institutional, and private-flag orders may differ.";
+  "Current status is based solely on published American Flags Express alerts. County-specific alerts are retained for review but excluded from public state-level status.";
 
 function isActive(order: HalfMastOrder, date: string) {
   return (
@@ -13,8 +13,11 @@ function isActive(order: HalfMastOrder, date: string) {
 }
 
 function isActiveAt(order: HalfMastOrder, date: string, time?: string) {
-  if (!isActive(order, date) || !time || !order.effectiveEndTime || date !== order.effectiveEnd) return isActive(order, date);
-  return time < order.effectiveEndTime;
+  if (!isActive(order, date)) return false;
+  if (!time) return true;
+  if (date === order.effectiveStart && order.effectiveStartTime && time < order.effectiveStartTime) return false;
+  if (order.effectiveEndTime && date === order.effectiveEnd && time >= order.effectiveEndTime) return false;
+  return true;
 }
 
 function appliesToState(order: HalfMastOrder, stateCode?: string) {
@@ -94,7 +97,7 @@ export function answerStatus({
     date,
     flagResults,
     applicableOrders,
-    sourceLinks: [...new Set([...applicableOrders.map((order) => order.sourceUrl), ...(currentStatuses || []).map((status) => status.sourceUrl).filter((url): url is string => Boolean(url))])],
+    sourceLinks: [],
     lastCheckedAt: currentStatuses?.map((status) => status.checkedAt).filter(Boolean).map((value) => value instanceof Date ? value.toISOString() : value as string).sort().at(-1) || checkedAt,
     coverageNotice,
   };

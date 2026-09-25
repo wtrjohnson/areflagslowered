@@ -11,7 +11,7 @@ import type { ParsedJurisdictionStatus } from "../lib/sources/texas.ts";
 type Database = ReturnType<typeof getDb>;
 type StatusValue = "half_mast" | "full_mast" | "below_us" | "uncertain";
 
-const coverageNotice = "Coverage currently includes official U.S. federal and state/territorial orders. City, county, facility, institutional, and private-flag orders may differ.";
+const coverageNotice = "Current status is based solely on published American Flags Express alerts. County-specific alerts are retained for review but are not included in the public state-level answer.";
 
 function appliesToJurisdiction(order: HalfMastOrder, jurisdictionId: string) {
   return order.scope === "nationwide" || order.jurisdiction.id === jurisdictionId;

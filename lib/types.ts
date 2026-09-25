@@ -32,11 +32,15 @@ export type HalfMastOrder = {
   effectiveStartTime?: string;
   effectiveEnd?: string;
   effectiveEndTime?: string;
-  effectiveEndCondition?: "sunrise" | "sunset" | "noon" | "midnight" | "clock";
-  timeZone?: "local" | "UTC";
+  effectiveEndCondition?: string;
+  timeZone?: string;
   sourceUrl: string;
   sourceSnapshotId: string;
   status: OrderStatus;
+  alertType?: "new" | "correction" | "cancellation" | "revision";
+  geographicScope?: "nationwide" | "statewide" | "county" | "unknown";
+  countyName?: string;
+  sourceMessageId?: string;
   createdAt: string;
 };
 

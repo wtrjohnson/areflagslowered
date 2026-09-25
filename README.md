@@ -1,7 +1,8 @@
 # Are Flags Lowered?
 
 A local, text-first prototype for answering why flags are at half-mast and
-whether the U.S. and state flags should be lowered today.
+whether the U.S. and state flags should be lowered today. Current public status
+is sourced only from American Flags Express email alerts.
 
 ## Prerequisites
 
@@ -15,16 +16,19 @@ npm run dev
 npm run build
 ```
 
-The API uses Neon PostgreSQL. Set `DATABASE_URL` before running migrations or
-the federal ingestion job. The public API is intentionally anonymous and
-database-backed; it does not silently treat a missing database as a full-mast
-answer.
+The API uses Neon PostgreSQL. Set `DATABASE_URL` before running migrations.
+CloudMailin posts American Flags Express alerts to `/api/ingest/email`; the
+endpoint requires `CLOUDMAILIN_SHARED_SECRET`, calls the Anthropic Messages API,
+and stores validated national/state orders. County alerts are retained for
+review but do not affect public state-level status.
 
 ## Included Prototype
 
 - `lib/types.ts` defines orders, sources, answers, and social drafts.
 - `lib/answer-engine.ts` resolves active orders by date, location, and flag type.
-- `lib/ingestion.ts` normalizes source changes and flags ambiguous records.
+- `lib/afe-email.ts` parses inbound multipart email and quoted-printable content.
+- `lib/afe-extractor.ts` defines the strict Anthropic tool-use extraction contract.
+- `lib/afe-ingestion.ts` validates, deduplicates, quarantines, and persists AFE alerts.
 - `lib/social.ts` creates reviewable, source-linked X drafts.
 - `db/schema.ts` defines the relational/PostgreSQL storage shape.
 - `app/api/status/route.ts` exposes the answer contract as JSON.
@@ -100,9 +104,9 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm run db:migrate`: apply migrations using `DATABASE_URL`
 - `npm run db:seed:jurisdictions`: seed the 57-jurisdiction registry
 - `npm run db:seed:sources`: seed the monitored official sources
-- `npm run ingest:federal -- --limit=10`: fetch and persist new White House candidates
-- `npm run ingest:federal -- --url=<proclamation-url> --force`: re-parse one source
-- `npm run ingest:federal -- --url=<proclamation-url> --dry-run`: fetch and print normalized data without Neon or local writes
+- `npm run test:afe`: verify the American Flags Express email fixture and extraction validation
+- `npm run db:seed:sources`: seed AFE as the only enabled source and disable legacy sources
+- `npm run afe:cutover`: explicitly remove legacy active data while preserving AFE records
 
 ## API
 
@@ -133,8 +137,9 @@ Demo data is available only in development and is labeled as such.
 The API requires `DATABASE_URL`. When Neon is unavailable, it returns HTTP
 503 with `status: "uncertain"`; it does not guess that flags are at full mast.
 
-The federal ingestion workflow runs every 15 minutes after `DATABASE_URL` is
-added as a GitHub Actions repository secret.
+Legacy federal/state ingestion scripts remain in the repository for reference,
+but are inactive and must not be scheduled. Status is resolved dynamically from
+published AFE orders, including their effective dates and ending conditions.
 
 ## Learn More
 

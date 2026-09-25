@@ -91,6 +91,10 @@ export const orders = pgTable("orders", {
   sourceUrl: text("source_url").notNull(),
   sourceSnapshotId: text("source_snapshot_id").notNull().references(() => sourceSnapshots.id),
   status: orderStatus("status").notNull(),
+  alertType: text("alert_type").notNull().default("new"),
+  geographicScope: text("geographic_scope").notNull().default("statewide"),
+  countyName: text("county_name"),
+  sourceMessageId: text("source_message_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({ effectiveDatesIdx: index("orders_effective_dates_idx").on(table.effectiveStart, table.effectiveEnd), jurisdictionIdx: index("orders_jurisdiction_idx").on(table.jurisdictionId) }));
@@ -102,6 +106,25 @@ export const federalStatus = pgTable("federal_status", {
   appliesToStateFlags: integer("applies_to_state_flags").notNull().default(0),
   evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull(),
 });
+
+export const inboundEmails = pgTable("inbound_emails", {
+  id: text("id").primaryKey(),
+  providerMessageId: text("provider_message_id"),
+  contentHash: text("content_hash").notNull(),
+  sender: text("sender"),
+  recipient: text("recipient"),
+  subject: text("subject"),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+  rawEmail: text("raw_email").notNull(),
+  extractedJson: jsonb("extracted_json"),
+  processingStatus: text("processing_status").notNull(),
+  error: text("error"),
+  orderId: text("order_id").references(() => orders.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  providerMessageIdx: uniqueIndex("inbound_emails_provider_message_idx").on(table.providerMessageId),
+  contentHashIdx: uniqueIndex("inbound_emails_content_hash_idx").on(table.contentHash),
+}));
 
 export const currentStatus = pgTable("current_status", {
   id: text("id").primaryKey(),

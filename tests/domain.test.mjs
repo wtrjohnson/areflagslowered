@@ -42,13 +42,13 @@ test("social drafts are reviewable and source-linked", () => {
   assert.match(draft.text, /Official source:/);
 });
 
-test("active order text explains why, where, when, and source", () => {
+test("active order text explains why, where, and when without exposing source links", () => {
   const answer = answerStatus({ location: "New York, NY", stateCode: "NY", date: "2026-09-07", orderRecords: [order] });
   const text = renderStatusText(answer);
   assert.match(text, /Why: A test reason\./);
   assert.match(text, /Where: Nationwide/);
   assert.match(text, /When: September 6, 2026 through September 8, 2026/);
-  assert.match(text, /Source: https:\/\/example\.gov\/order/);
+  assert.doesNotMatch(text, /Source:/);
   assert.match(text, /September 8, 2026 at 18:00/);
 });
 
