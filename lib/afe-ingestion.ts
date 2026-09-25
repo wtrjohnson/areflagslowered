@@ -3,7 +3,7 @@ import { getDb } from "../db/index.ts";
 import { inboundEmails, orders, sources, sourceSnapshots } from "../db/schema.ts";
 import { upsertJurisdiction, upsertOrder, upsertSource } from "../db/orders.ts";
 import { jurisdictionCatalog, federalJurisdiction } from "./jurisdictions.ts";
-import { hashText, parseInboundEmail, type InboundEmail } from "./afe-email.ts";
+import { emailText, hashText, parseInboundEmail, type InboundEmail } from "./afe-email.ts";
 import { extractAfeEmail, validateAfeExtraction, type AfeExtraction } from "./afe-extractor.ts";
 
 const AFE_SOURCE_ID = "american-flags-express-email";
@@ -22,7 +22,11 @@ function orderId(email: InboundEmail, extraction: AfeExtraction) {
 }
 
 export function validateAfeSender(email: InboundEmail) {
-  return /@flagsexpress\.com\b/i.test(email.sender) && /American Flags Express/i.test(email.subject);
+  const text = emailText(email);
+  const isDirectAfeMessage = /@flagsexpress\.com\b/i.test(email.sender);
+  const isForwardedAfeMessage = /@flagsexpress\.com\b/i.test(text) && /American Flags Express/i.test(text);
+  const isHalfStaffAlert = /\bHalf-Staff Alert\b/i.test(email.subject) || /\bHalf-Staff Alert\b/i.test(text);
+  return (isDirectAfeMessage || isForwardedAfeMessage) && isHalfStaffAlert;
 }
 
 export async function ingestAfeEmail(rawEmail: string, options: { providerMessageId?: string; receivedAt?: Date; apiKey?: string; model?: string } = {}) {
