@@ -18,7 +18,8 @@ npm run build
 
 The API uses Neon PostgreSQL. Set `DATABASE_URL` before running migrations.
 CloudMailin posts American Flags Express alerts to `/api/ingest/email`; the
-endpoint requires `CLOUDMAILIN_SHARED_SECRET`, calls the Anthropic Messages API,
+endpoint requires `CLOUDMAILIN_SHARED_SECRET` (or the tokenized CloudMailin
+route's `CLOUDMAILIN_WEBHOOK_TOKEN`), calls the Anthropic Messages API,
 and stores validated national/state orders. County alerts are retained for
 review but do not affect public state-level status.
 
