@@ -36,6 +36,18 @@ test("accepts direct and forwarded American Flags Express alerts", () => {
   assert.equal(validateAfeSender(parseInboundEmail(forwarded)), true);
 });
 
+test("accepts the trusted forwarder when CloudMailin omits forwarded headers", () => {
+  const forwardedWithoutHeaders = [
+    "From: w@williamj.us",
+    "Subject: Fwd: North Carolina - Half-Staff Alert - Sean Michael Lee",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    "Governor Stein ordered North Carolina flags to half-staff in honor of Sean Michael Lee.",
+  ].join("\n");
+
+  assert.equal(validateAfeSender(parseInboundEmail(forwardedWithoutHeaders)), true);
+});
+
 test("rejects unrelated forwarded mail", () => {
   const unrelated = [
     "From: w@williamj.us",
