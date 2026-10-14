@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { answerStatus } from "../lib/answer-engine.ts";
 import { jurisdictionCatalog } from "../lib/jurisdictions.ts";
 import type { StatusAnswer, FlagResult, Jurisdiction } from "../lib/types.ts";
@@ -33,21 +33,67 @@ function menuStatusLabel(status: MenuStatus) {
   return status === "half_mast" ? "Half-mast" : status === "below_us" ? "Below U.S." : status === "uncertain" ? "Review" : "Full mast";
 }
 
+function relativeTime(value: string, now: number) {
+  const elapsed = Math.max(0, now - new Date(value).getTime());
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return "Updated just now";
+  if (minutes < 60) return `Updated ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Updated ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 export default function Home() {
   const [selectedState, setSelectedState] = useState(defaultState);
   const [stateOpen, setStateOpen] = useState(false);
-  const [activeStateIndex, setActiveStateIndex] = useState(() => jurisdictionCatalog.findIndex((state) => state.id === defaultState.id));
+  const [stateQuery, setStateQuery] = useState("");
+  const [focusedStateId, setFocusedStateId] = useState(defaultState.id);
   const [menuStatuses, setMenuStatuses] = useState<Record<string, MenuStatus>>({});
   const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(defaultState, today));
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
   const statePickerRef = useRef<HTMLDivElement>(null);
+  const stateTriggerRef = useRef<HTMLButtonElement>(null);
+  const stateSearchRef = useRef<HTMLInputElement>(null);
+
+  const filteredStates = useMemo(() => {
+    const query = stateQuery.trim().toLowerCase();
+    if (!query) return jurisdictionCatalog;
+    return jurisdictionCatalog.filter((state) => state.name.toLowerCase().includes(query) || state.stateCode.toLowerCase().includes(query));
+  }, [stateQuery]);
+  const activeStateId = filteredStates.some((state) => state.id === focusedStateId) ? focusedStateId : (filteredStates[0]?.id || "");
+
+  const closePicker = (returnFocus = false) => {
+    setStateOpen(false);
+    setStateQuery("");
+    if (returnFocus) requestAnimationFrame(() => stateTriggerRef.current?.focus());
+  };
+
+  const selectState = (state: Jurisdiction) => {
+    setLoading(true);
+    setAnswer(fallbackAnswer(state, today));
+    setSelectedState(state);
+    setFocusedStateId(state.id);
+    closePicker(true);
+  };
 
   useEffect(() => {
     const closeOnOutsideClick = (event: PointerEvent) => {
-      if (statePickerRef.current && !statePickerRef.current.contains(event.target as Node)) setStateOpen(false);
+      if (statePickerRef.current && !statePickerRef.current.contains(event.target as Node)) closePicker();
     };
     document.addEventListener("pointerdown", closeOnOutsideClick);
     return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    if (!stateOpen) return;
+    stateSearchRef.current?.focus();
+  }, [stateOpen]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -83,11 +129,17 @@ export default function Home() {
     return () => controller.abort();
   }, [selectedState]);
 
+  const moveActiveState = (direction: number) => {
+    if (!filteredStates.length) return;
+    const currentIndex = Math.max(0, filteredStates.findIndex((state) => state.id === activeStateId));
+    const nextIndex = (currentIndex + direction + filteredStates.length) % filteredStates.length;
+    setFocusedStateId(filteredStates[nextIndex].id);
+  };
+
   const usResult = answer.flagResults.find((result) => result.flagType === "us");
   const stateResult = answer.flagResults.find((result) => result.flagType === "state");
   const leadOrder = usResult?.orders[0] || stateResult?.orders[0];
   const reason = leadOrder?.reason || (stateResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : stateResult?.status === "half_mast" ? stateResult.explanation : usResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : usResult?.explanation);
-  const sourceUrl = null;
   const explanation = (() => {
     if (usResult?.status === "half_mast" && stateResult?.status === "half_mast") return "All flags to be flown at half-mast";
     if (usResult?.status === "half_mast") return "The U.S. flag is to be flown at half-mast";
@@ -105,45 +157,71 @@ export default function Home() {
 
       <section className="hero" aria-labelledby="status-heading">
         <h1 id="status-heading" className="sr-only">Current flag status</h1>
-        <div className="flag-heading">
-          <h2>United States</h2>
+        <div className="location-context">
+          <span>United States</span>
+          <span className="location-divider" aria-hidden="true">·</span>
           <div className="state-picker" ref={statePickerRef}>
-            <span className="sr-only">Choose a state</span>
             <button
+              ref={stateTriggerRef}
               type="button"
               className="state-trigger"
-              aria-haspopup="listbox"
+              aria-haspopup="dialog"
               aria-expanded={stateOpen}
-              aria-controls="state-listbox"
-              onClick={() => { setActiveStateIndex(jurisdictionCatalog.findIndex((state) => state.id === selectedState.id)); setStateOpen((open) => !open); }}
+              aria-controls="state-picker-panel"
+              onClick={() => {
+                setFocusedStateId(selectedState.id);
+                setStateQuery("");
+                setStateOpen((open) => !open);
+              }}
               onKeyDown={(event) => {
-                if (event.key === "Escape") { setStateOpen(false); return; }
                 if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                   event.preventDefault();
-                  const direction = event.key === "ArrowDown" ? 1 : -1;
+                  setFocusedStateId(selectedState.id);
+                  setStateQuery("");
                   setStateOpen(true);
-                  setActiveStateIndex((index) => (index + direction + jurisdictionCatalog.length) % jurisdictionCatalog.length);
-                }
-                if ((event.key === "Enter" || event.key === " ") && stateOpen) {
-                  event.preventDefault();
-                  const nextState = jurisdictionCatalog[activeStateIndex];
-                  setLoading(true); setSelectedState(nextState); setStateOpen(false);
                 }
               }}
             >
               <span>{selectedState.name}</span><span className="chevron" aria-hidden="true">⌄</span>
             </button>
-            {stateOpen && <div id="state-listbox" className="state-menu" role="listbox" aria-label="Choose a state">
-              {jurisdictionCatalog.map((state, index) => <button
-                type="button"
-                role="option"
-                id={`state-option-${state.id}`}
-                className={`state-option ${state.id === selectedState.id ? "selected" : ""} ${index === activeStateIndex ? "active" : ""}`}
-                aria-selected={state.id === selectedState.id}
-                key={state.id}
-                onMouseEnter={() => setActiveStateIndex(index)}
-                onClick={() => { setLoading(true); setSelectedState(state); setActiveStateIndex(index); setStateOpen(false); }}
-              ><span>{state.name}</span><span className="state-option-meta"><small>{state.stateCode}</small>{menuStatuses[state.id] && <span className={`state-menu-status state-menu-${menuStatuses[state.id]}`}><i aria-hidden="true" />{menuStatusLabel(menuStatuses[state.id])}</span>}</span></button>)}
+            {stateOpen && <div id="state-picker-panel" className="state-menu" role="dialog" aria-label="Choose a state">
+              <label className="sr-only" htmlFor="state-search">Search states</label>
+              <input
+                ref={stateSearchRef}
+                id="state-search"
+                className="state-search"
+                type="search"
+                placeholder="Search states"
+                value={stateQuery}
+                onChange={(event) => {
+                  const query = event.target.value;
+                  setStateQuery(query);
+                  const firstMatch = jurisdictionCatalog.find((state) => state.name.toLowerCase().includes(query.toLowerCase()) || state.stateCode.toLowerCase().includes(query.toLowerCase()));
+                  setFocusedStateId(firstMatch?.id || "");
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") { event.preventDefault(); closePicker(true); }
+                  if (event.key === "ArrowDown") { event.preventDefault(); moveActiveState(1); }
+                  if (event.key === "ArrowUp") { event.preventDefault(); moveActiveState(-1); }
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    const activeState = filteredStates.find((state) => state.id === activeStateId);
+                    if (activeState) selectState(activeState);
+                  }
+                }}
+              />
+              <div className="state-options" role="listbox" aria-label="Matching states" aria-activedescendant={activeStateId ? `state-option-${activeStateId}` : undefined}>
+                {filteredStates.length ? filteredStates.map((state) => <button
+                  type="button"
+                  role="option"
+                  id={`state-option-${state.id}`}
+                  className={`state-option ${state.id === selectedState.id ? "selected" : ""} ${state.id === activeStateId ? "active" : ""}`}
+                  aria-selected={state.id === selectedState.id}
+                  key={state.id}
+                  onMouseEnter={() => setFocusedStateId(state.id)}
+                  onClick={() => selectState(state)}
+                ><span>{state.name}</span><span className="state-option-meta"><small>{state.stateCode}</small>{menuStatuses[state.id] && <span className={`state-menu-status state-menu-${menuStatuses[state.id]}`}><i aria-hidden="true" />{menuStatusLabel(menuStatuses[state.id])}</span>}</span></button>) : <p className="no-state-match">No matching state</p>}
+              </div>
             </div>}
           </div>
         </div>
@@ -153,17 +231,15 @@ export default function Home() {
           <FlagDisplay result={stateResult} kind="state" stateName={selectedState.name} stateCode={selectedState.stateCode} />
         </div>
 
-        <div className="status-copy">
-          {explanation && <p className="status-explanation">{explanation}</p>}
-          {answer.status !== "full_mast" && <p className="reason"><strong>Why?</strong> <span>{reason || "No current official order found."}</span></p>}
-          {leadOrder && <p className="timing">{dateText(leadOrder)}</p>}
-          <div className="meta-row">
-            <span>{loading ? "Checking official sources…" : `Checked ${new Date(answer.lastCheckedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`}</span>
-            {sourceUrl && <a href={sourceUrl} target="_blank" rel="noreferrer">Official source ↗</a>}
-          </div>
+        <div className={`status-copy ${loading ? "is-loading" : ""}`} aria-live="polite" aria-busy={loading}>
+          {loading ? <p className="status-loading">Updating flag status…</p> : <>
+            {explanation && <p className="status-explanation">{explanation}</p>}
+            {answer.status !== "full_mast" && <p className="reason"><strong>Why?</strong> <span>{reason || "No current official order found."}</span></p>}
+            {leadOrder && <p className="timing">{dateText(leadOrder)}</p>}
+            <div className="meta-row"><span title={new Date(answer.lastCheckedAt).toLocaleString()}>{relativeTime(answer.lastCheckedAt, now)}</span></div>
+          </>}
         </div>
       </section>
-
     </main>
   );
 }
