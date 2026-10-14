@@ -47,7 +47,7 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
   try {
     const extraction = await extractAfeEmail(email, options.apiKey, options.model);
     validateAfeExtraction(extraction);
-    const reasonSummary = await summarizeAfeReason(extraction.reason, options.apiKey, options.model);
+    const reasonSummary = await summarizeAfeReason(extraction.reason, extraction.namedEntities, options.apiKey, options.model);
     const snapshotId = `afe-snapshot-${email.contentHash.slice(0, 24)}`;
     await db.insert(sourceSnapshots).values({ id: snapshotId, sourceId: AFE_SOURCE_ID, url: AFE_SOURCE_URL, retrievedAt: options.receivedAt || new Date(), contentHash: email.contentHash, content: rawEmail, parserStatus: "parsed" }).onConflictDoNothing();
     const jurisdiction = stateFor(extraction);
@@ -81,7 +81,7 @@ export async function approveAfeInboundEmail(id: string) {
   const idForOrder = orderId(email, extraction);
   await upsertJurisdiction(db, jurisdiction);
   const storedSummary = (row.extractedJson as AfeExtraction & { reasonSummary?: string }).reasonSummary;
-  const reasonSummary = storedSummary || await summarizeAfeReason(extraction.reason);
+  const reasonSummary = storedSummary || await summarizeAfeReason(extraction.reason, extraction.namedEntities || []);
   await upsertOrder(db, { id: idForOrder, title: extraction.title || row.subject || "American Flags Express alert", reason: reasonSummary, issuingAuthority: extraction.issuingAuthority, jurisdiction, flagTypes: extraction.flagTypes, scope: extraction.geographicScope, instructionType: "order", instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart, effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined, effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined, timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: extraction.alertType === "cancellation" ? "rejected" : "published", createdAt: row.receivedAt.toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId });
   await db.update(inboundEmails).set({ processingStatus: "published", orderId: idForOrder, error: null }).where(eq(inboundEmails.id, id));
   return { status: "published", id, orderId: idForOrder };

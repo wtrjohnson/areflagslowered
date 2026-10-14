@@ -63,6 +63,6 @@ test("rejects unrelated forwarded mail", () => {
 
 test("validates county alerts without allowing missing geographic fields", () => {
   assert.doesNotThrow(() => validateAfeExtraction({
-    alertType: "new", flagTypes: ["us", "state"], stateName: "Pennsylvania", stateCode: "PA", geographicScope: "county", countyName: "Erie", title: "Bryce Kaufmann", reason: "Honor of Bryce Kaufmann", issuingAuthority: "Governor Josh Shapiro", effectiveStart: "2026-09-22", effectiveStartTime: null, effectiveEnd: null, effectiveEndTime: null, effectiveEndCondition: "interment", timeZone: "America/New_York", instructionText: "Flags shall remain lowered until interment.", externalId: null,
+    alertType: "new", flagTypes: ["us", "state"], stateName: "Pennsylvania", stateCode: "PA", geographicScope: "county", countyName: "Erie", title: "Bryce Kaufmann", reason: "Honor of Bryce Kaufmann", namedEntities: ["Bryce Kaufmann"], issuingAuthority: "Governor Josh Shapiro", effectiveStart: "2026-09-22", effectiveStartTime: null, effectiveEnd: null, effectiveEndTime: null, effectiveEndCondition: "interment", timeZone: "America/New_York", instructionText: "Flags shall remain lowered until interment.", externalId: null,
   }));
 });
