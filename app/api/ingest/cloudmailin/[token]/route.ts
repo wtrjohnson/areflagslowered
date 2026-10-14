@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { ingestAfeEmail } from "../../../../../lib/afe-ingestion.ts";
 
+function isRawMimeMessage(value: string) {
+  return /^(?:[\w-]+:[^\r\n]*\r?\n){2,}\r?\n/.test(value);
+}
+
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
   const expected = process.env.CLOUDMAILIN_WEBHOOK_TOKEN || process.env.CLOUDMAILIN_SHARED_SECRET;
@@ -12,13 +16,14 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     if (contentType.includes("application/json")) {
       const payload = await request.json() as Record<string, unknown>;
       const envelope = payload.envelope as { from?: string; to?: string } | undefined;
-      const value = String(payload.raw || payload.raw_email || payload.email || payload.body || payload.plain || payload["body-plain"] || "");
-      raw = value.includes("\n\n") ? value : `From: ${payload.from || envelope?.from || ""}\nTo: ${payload.to || envelope?.to || ""}\nSubject: ${payload.subject || ""}\nMessage-Id: ${payload.message_id || payload.messageId || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
+      const headers = payload.headers as Record<string, unknown> | undefined;
+      const value = String(payload.raw || payload.raw_email || payload.email || payload.plain || payload["body-plain"] || payload.body || "");
+      raw = isRawMimeMessage(value) ? value : `From: ${payload.from || envelope?.from || headers?.from || headers?.From || ""}\nTo: ${payload.to || envelope?.to || headers?.to || headers?.To || ""}\nSubject: ${payload.subject || headers?.subject || headers?.Subject || ""}\nMessage-Id: ${payload.message_id || payload.messageId || headers?.["message-id"] || headers?.["Message-Id"] || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
       providerMessageId ||= String(payload.message_id || payload.messageId || "");
     } else if (contentType.includes("form-urlencoded") || contentType.includes("multipart/form-data")) {
       const form = await request.formData();
       const value = String(form.get("raw") || form.get("raw_email") || form.get("email") || form.get("plain") || form.get("body-plain") || form.get("body") || "");
-      raw = value.includes("\n\n") ? value : `From: ${form.get("from") || ""}\nTo: ${form.get("to") || ""}\nSubject: ${form.get("subject") || ""}\nMessage-Id: ${form.get("message-id") || form.get("message_id") || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
+      raw = isRawMimeMessage(value) ? value : `From: ${form.get("from") || ""}\nTo: ${form.get("to") || ""}\nSubject: ${form.get("subject") || ""}\nMessage-Id: ${form.get("message-id") || form.get("message_id") || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
       providerMessageId ||= String(form.get("message-id") || form.get("message_id") || "");
     } else {
       raw = await request.text();

@@ -8,7 +8,10 @@ import { extractAfeEmail, summarizeAfeReason, validateAfeExtraction, type AfeExt
 
 const AFE_SOURCE_ID = "american-flags-express-email";
 const AFE_SOURCE_URL = process.env.AFE_SOURCE_URL || "https://flagsexpress.com";
-const AFE_FORWARDER_EMAIL = (process.env.AFE_FORWARDER_EMAIL || "w@williamj.us").trim().toLowerCase();
+const AFE_TRUSTED_FORWARDERS = (process.env.AFE_TRUSTED_FORWARDERS || process.env.AFE_FORWARDER_EMAIL || "w@williamj.us")
+  .split(",")
+  .map((value) => value.trim().toLowerCase())
+  .filter(Boolean);
 
 function stateFor(extraction: AfeExtraction) {
   if (extraction.geographicScope === "nationwide") return federalJurisdiction;
@@ -28,7 +31,7 @@ export function validateAfeSender(email: InboundEmail) {
   const isForwardedAfeMessage = /@flagsexpress\.com\b/i.test(text) && /American Flags Express/i.test(text);
   const isHalfStaffAlert = /\bHalf-Staff Alert\b/i.test(email.subject) || /\bHalf-Staff Alert\b/i.test(text);
   const senderAddress = email.sender.match(/<([^>]+)>/)?.[1] || email.sender.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0] || "";
-  const isTrustedForwarder = senderAddress.trim().toLowerCase() === AFE_FORWARDER_EMAIL;
+  const isTrustedForwarder = AFE_TRUSTED_FORWARDERS.includes(senderAddress.trim().toLowerCase());
   return (isDirectAfeMessage || isForwardedAfeMessage || isTrustedForwarder) && isHalfStaffAlert;
 }
 
@@ -84,4 +87,4 @@ export async function approveAfeInboundEmail(id: string) {
   return { status: "published", id, orderId: idForOrder };
 }
 
-export { AFE_SOURCE_ID, AFE_SOURCE_URL };
+export { AFE_SOURCE_ID, AFE_SOURCE_URL, AFE_TRUSTED_FORWARDERS };
