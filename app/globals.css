@@ -7,7 +7,7 @@ button, input { font: inherit; }
 .status-page { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 20px 48px 32px; }
 .masthead { display: flex; justify-content: center; align-items: baseline; gap: 12px; }
 .brand, .brand-answer { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 400; letter-spacing: -.07em; }
-.brand-answer { color: var(--accent); letter-spacing: -.06em; }
+.brand-answer { color: var(--accent); letter-spacing: -.06em; transition: filter 220ms ease, opacity 220ms ease; }
 .status-full_mast .brand-answer { color: var(--blue); }
 .status-uncertain .brand-answer { color: var(--warning); }
 .hero { max-width: 930px; margin: 34px auto 0; }
@@ -52,10 +52,11 @@ button, input { font: inherit; }
 .flag-uncertain .flag-cloth { --mast-offset: 42px; opacity: .45; border: 2px dashed var(--warning); background: transparent; }
 .flag-uncertain .flag-cloth::after { display: none; }
 .flag-name { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.035em; }
-.flag-status { margin: 0; color: var(--muted); font-size: 15px; }
+.flag-status { margin: 0; color: var(--muted); font-size: 15px; transition: filter 220ms ease, opacity 220ms ease; }
 .flag-half_mast .flag-status { color: var(--accent); }
 .status-full_mast .flag-full_mast .flag-status { color: var(--blue); }
 .flag-uncertain .flag-status { color: var(--warning); }
+.status-page.is-refreshing .brand-answer, .status-page.is-refreshing .flag-status { filter: blur(3px); opacity: .5; }
 .status-copy { min-height: 88px; margin-top: 16px; text-align: center; animation: status-reveal 260ms ease both; }
 .status-copy.is-loading { display: grid; place-items: center; }
 .status-loading { margin: 0; color: var(--muted); font-size: 15px; }

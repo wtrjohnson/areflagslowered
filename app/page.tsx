@@ -52,10 +52,12 @@ export default function Home() {
   const [menuStatuses, setMenuStatuses] = useState<Record<string, MenuStatus>>({});
   const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(defaultState, today));
   const [loading, setLoading] = useState(true);
+  const [refreshingState, setRefreshingState] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const statePickerRef = useRef<HTMLDivElement>(null);
   const stateTriggerRef = useRef<HTMLButtonElement>(null);
   const stateSearchRef = useRef<HTMLInputElement>(null);
+  const statusRequestRef = useRef(0);
 
   const filteredStates = useMemo(() => {
     const query = stateQuery.trim().toLowerCase();
@@ -72,6 +74,7 @@ export default function Home() {
 
   const selectState = (state: Jurisdiction) => {
     setLoading(true);
+    setRefreshingState(true);
     setAnswer(fallbackAnswer(state, today));
     setSelectedState(state);
     setFocusedStateId(state.id);
@@ -114,6 +117,7 @@ export default function Home() {
 
   useEffect(() => {
     const controller = new AbortController();
+    const requestId = ++statusRequestRef.current;
     const params = new URLSearchParams({ location: selectedState.name, state: selectedState.stateCode || "", date: today });
     fetch(`/api/status?${params}`, { signal: controller.signal })
       .then(async (response) => {
@@ -125,7 +129,11 @@ export default function Home() {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setAnswer(fallbackAnswer(selectedState, today));
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (statusRequestRef.current !== requestId) return;
+        setLoading(false);
+        setRefreshingState(false);
+      });
     return () => controller.abort();
   }, [selectedState]);
 
@@ -149,7 +157,7 @@ export default function Home() {
   })();
 
   return (
-    <main className={`status-page status-${answer.status}`}>
+    <main className={`status-page status-${answer.status} ${refreshingState ? "is-refreshing" : ""}`}>
       <header className="masthead">
         <p className="brand">AreFlagsLowered?</p>
         <p className="brand-answer" aria-live="polite">{statusWord(answer.status)}</p>
