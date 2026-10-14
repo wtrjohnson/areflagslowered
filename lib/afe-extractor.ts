@@ -58,6 +58,29 @@ export async function extractAfeEmail(email: InboundEmail, apiKey = process.env.
   return toolUse.input;
 }
 
+/**
+ * The extraction step deliberately preserves the source wording. This separate
+ * step creates the short, public-facing explanation shown on the site.
+ */
+export async function summarizeAfeReason(reason: string, apiKey = process.env.ANTHROPIC_API_KEY, model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6") {
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      max_tokens: 120,
+      model,
+      system: "Write one neutral, plain-language sentence (30 words or fewer) that summarizes the stated reason for lowering flags. Use only the supplied source text. Do not add facts, dates, locations, or honorifics that are not stated. Return only the sentence.",
+      messages: [{ role: "user", content: reason }],
+    }),
+  });
+  if (!response.ok) throw new Error(`Anthropic reason summary failed with HTTP ${response.status}.`);
+  const payload = await response.json() as { content?: Array<{ type?: string; text?: string }> };
+  const summary = payload.content?.find((item) => item.type === "text")?.text?.replace(/\s+/g, " ").trim();
+  if (!summary) throw new Error("Anthropic reason summary returned no text.");
+  return summary.replace(/^['\"]|['\"]$/g, "");
+}
+
 export function validateAfeExtraction(value: AfeExtraction) {
   if (!value || !["new", "correction", "cancellation", "revision"].includes(value.alertType)) throw new Error("Invalid alert type.");
   if (!value.flagTypes?.length || value.flagTypes.some((flag) => !["us", "state"].includes(flag))) throw new Error("At least one valid flag type is required.");

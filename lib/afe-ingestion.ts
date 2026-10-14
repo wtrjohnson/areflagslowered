@@ -4,7 +4,7 @@ import { inboundEmails, orders, sources, sourceSnapshots } from "../db/schema.ts
 import { upsertJurisdiction, upsertOrder, upsertSource } from "../db/orders.ts";
 import { jurisdictionCatalog, federalJurisdiction } from "./jurisdictions.ts";
 import { emailText, hashText, parseInboundEmail, type InboundEmail } from "./afe-email.ts";
-import { extractAfeEmail, validateAfeExtraction, type AfeExtraction } from "./afe-extractor.ts";
+import { extractAfeEmail, summarizeAfeReason, validateAfeExtraction, type AfeExtraction } from "./afe-extractor.ts";
 
 const AFE_SOURCE_ID = "american-flags-express-email";
 const AFE_SOURCE_URL = process.env.AFE_SOURCE_URL || "https://flagsexpress.com";
@@ -44,6 +44,7 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
   try {
     const extraction = await extractAfeEmail(email, options.apiKey, options.model);
     validateAfeExtraction(extraction);
+    const reasonSummary = await summarizeAfeReason(extraction.reason, options.apiKey, options.model);
     const snapshotId = `afe-snapshot-${email.contentHash.slice(0, 24)}`;
     await db.insert(sourceSnapshots).values({ id: snapshotId, sourceId: AFE_SOURCE_ID, url: AFE_SOURCE_URL, retrievedAt: options.receivedAt || new Date(), contentHash: email.contentHash, content: rawEmail, parserStatus: "parsed" }).onConflictDoNothing();
     const jurisdiction = stateFor(extraction);
@@ -51,8 +52,8 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
     const idForOrder = orderId(email, extraction);
     if (supported && !(extraction.alertType !== "new" && !extraction.externalId)) {
       await upsertJurisdiction(db, jurisdiction);
-      await upsertOrder(db, { id: idForOrder, title: extraction.title || email.subject, reason: extraction.reason, issuingAuthority: extraction.issuingAuthority, jurisdiction, flagTypes: extraction.flagTypes, scope: extraction.geographicScope === "nationwide" ? "nationwide" : "statewide", instructionType: "order", instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart, effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined, effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined, timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: extraction.alertType === "cancellation" ? "rejected" : "published", createdAt: (options.receivedAt || new Date()).toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId || options.providerMessageId });
-      await db.update(inboundEmails).set({ extractedJson: extraction, processingStatus: "published", orderId: idForOrder }).where(eq(inboundEmails.id, id));
+      await upsertOrder(db, { id: idForOrder, title: extraction.title || email.subject, reason: reasonSummary, issuingAuthority: extraction.issuingAuthority, jurisdiction, flagTypes: extraction.flagTypes, scope: extraction.geographicScope === "nationwide" ? "nationwide" : "statewide", instructionType: "order", instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart, effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined, effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined, timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: extraction.alertType === "cancellation" ? "rejected" : "published", createdAt: (options.receivedAt || new Date()).toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId || options.providerMessageId });
+      await db.update(inboundEmails).set({ extractedJson: { ...extraction, reasonSummary }, processingStatus: "published", orderId: idForOrder }).where(eq(inboundEmails.id, id));
       return { status: "published", id, orderId: idForOrder, duplicate: false };
     }
     await db.update(inboundEmails).set({ extractedJson: extraction, processingStatus: "quarantined", error: extraction.geographicScope === "county" ? "County scope is not supported by the public v1 status model." : "Correction/revision requires an external order identifier." }).where(eq(inboundEmails.id, id));
@@ -76,7 +77,9 @@ export async function approveAfeInboundEmail(id: string) {
   await db.insert(sourceSnapshots).values({ id: snapshotId, sourceId: AFE_SOURCE_ID, url: AFE_SOURCE_URL, retrievedAt: row.receivedAt, contentHash: row.contentHash, content: row.rawEmail, parserStatus: "parsed" }).onConflictDoNothing();
   const idForOrder = orderId(email, extraction);
   await upsertJurisdiction(db, jurisdiction);
-  await upsertOrder(db, { id: idForOrder, title: extraction.title || row.subject || "American Flags Express alert", reason: extraction.reason, issuingAuthority: extraction.issuingAuthority, jurisdiction, flagTypes: extraction.flagTypes, scope: extraction.geographicScope, instructionType: "order", instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart, effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined, effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined, timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: extraction.alertType === "cancellation" ? "rejected" : "published", createdAt: row.receivedAt.toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId });
+  const storedSummary = (row.extractedJson as AfeExtraction & { reasonSummary?: string }).reasonSummary;
+  const reasonSummary = storedSummary || await summarizeAfeReason(extraction.reason);
+  await upsertOrder(db, { id: idForOrder, title: extraction.title || row.subject || "American Flags Express alert", reason: reasonSummary, issuingAuthority: extraction.issuingAuthority, jurisdiction, flagTypes: extraction.flagTypes, scope: extraction.geographicScope, instructionType: "order", instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart, effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined, effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined, timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: extraction.alertType === "cancellation" ? "rejected" : "published", createdAt: row.receivedAt.toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId });
   await db.update(inboundEmails).set({ processingStatus: "published", orderId: idForOrder, error: null }).where(eq(inboundEmails.id, id));
   return { status: "published", id, orderId: idForOrder };
 }

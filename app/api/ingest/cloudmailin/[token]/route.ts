@@ -11,12 +11,13 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     let providerMessageId = request.headers.get("x-cloudmailin-message-id") || "";
     if (contentType.includes("application/json")) {
       const payload = await request.json() as Record<string, unknown>;
-      const value = String(payload.raw || payload.raw_email || payload.email || payload.body || payload["body-plain"] || "");
-      raw = value.includes("\n\n") ? value : `From: ${payload.from || ""}\nTo: ${payload.to || ""}\nSubject: ${payload.subject || ""}\nMessage-Id: ${payload.message_id || payload.messageId || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
+      const envelope = payload.envelope as { from?: string; to?: string } | undefined;
+      const value = String(payload.raw || payload.raw_email || payload.email || payload.body || payload.plain || payload["body-plain"] || "");
+      raw = value.includes("\n\n") ? value : `From: ${payload.from || envelope?.from || ""}\nTo: ${payload.to || envelope?.to || ""}\nSubject: ${payload.subject || ""}\nMessage-Id: ${payload.message_id || payload.messageId || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
       providerMessageId ||= String(payload.message_id || payload.messageId || "");
     } else if (contentType.includes("form-urlencoded") || contentType.includes("multipart/form-data")) {
       const form = await request.formData();
-      const value = String(form.get("raw") || form.get("raw_email") || form.get("email") || form.get("body-plain") || form.get("body") || "");
+      const value = String(form.get("raw") || form.get("raw_email") || form.get("email") || form.get("plain") || form.get("body-plain") || form.get("body") || "");
       raw = value.includes("\n\n") ? value : `From: ${form.get("from") || ""}\nTo: ${form.get("to") || ""}\nSubject: ${form.get("subject") || ""}\nMessage-Id: ${form.get("message-id") || form.get("message_id") || ""}\nContent-Type: text/plain; charset=utf-8\n\n${value}`;
       providerMessageId ||= String(form.get("message-id") || form.get("message_id") || "");
     } else {
