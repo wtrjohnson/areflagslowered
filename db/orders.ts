@@ -1,4 +1,4 @@
-import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { getDb } from "./index.ts";
 import { ingestionRuns, jurisdictions, orders, sourceChecks, sourceSnapshots, sources } from "./schema.ts";
 import type { HalfMastOrder, Jurisdiction, SourceSnapshot } from "../lib/types.ts";
@@ -39,7 +39,7 @@ export async function listActiveOrders(db: Database, date: string) {
     .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
     .innerJoin(sourceSnapshots, eq(orders.sourceSnapshotId, sourceSnapshots.id))
     .innerJoin(sources, eq(sourceSnapshots.sourceId, sources.id))
-    .where(and(eq(orders.status, "published"), eq(sources.id, "american-flags-express-email"), lte(orders.effectiveStart, date), or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, date))));
+    .where(and(eq(orders.status, "published"), eq(sources.id, "american-flags-express-email"), inArray(orders.geographicScope, ["nationwide", "statewide"]), lte(orders.effectiveStart, date), or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, date))));
   return rows.map(mapOrder);
 }
 

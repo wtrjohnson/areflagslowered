@@ -19,9 +19,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   if (!(await operatorAuthorized())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const payload = await request.json() as { id?: string; action?: "approve" | "reject" };
+  const payload = await request.json() as { id?: string; action?: "approve" | "reject"; canonicalOrderId?: string };
   if (!payload.id || !payload.action) return NextResponse.json({ error: "id and action are required." }, { status: 400 });
-  if (payload.action === "approve") return NextResponse.json(await approveAfeInboundEmail(payload.id));
+  if (payload.action === "approve") return NextResponse.json(await approveAfeInboundEmail(payload.id, payload.canonicalOrderId));
   await getDb().update(inboundEmails).set({ processingStatus: "rejected", error: "Rejected by operator." }).where(and(eq(inboundEmails.id, payload.id), eq(inboundEmails.processingStatus, "quarantined")));
   return NextResponse.json({ status: "rejected", id: payload.id });
 }

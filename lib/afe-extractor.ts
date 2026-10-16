@@ -6,13 +6,14 @@ export type AfeExtraction = {
   flagTypes: Array<"us" | "state">;
   stateName: string | null;
   stateCode: string | null;
-  geographicScope: "nationwide" | "statewide" | "county" | "unknown";
+  geographicScope: "nationwide" | "statewide" | "county" | "municipal" | "unknown";
   countyName: string | null;
+  localityName: string | null;
   title: string;
   reason: string;
   namedEntities: string[];
   issuingAuthority: string;
-  effectiveStart: string;
+  effectiveStart: string | null;
   effectiveStartTime: string | null;
   effectiveEnd: string | null;
   effectiveEndTime: string | null;
@@ -25,15 +26,15 @@ export type AfeExtraction = {
 export const afeExtractionSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["alertType", "flagTypes", "stateName", "stateCode", "geographicScope", "countyName", "title", "reason", "namedEntities", "issuingAuthority", "effectiveStart", "effectiveStartTime", "effectiveEnd", "effectiveEndTime", "effectiveEndCondition", "timeZone", "instructionText", "externalId"],
+  required: ["alertType", "flagTypes", "stateName", "stateCode", "geographicScope", "countyName", "localityName", "title", "reason", "namedEntities", "issuingAuthority", "effectiveStart", "effectiveStartTime", "effectiveEnd", "effectiveEndTime", "effectiveEndCondition", "timeZone", "instructionText", "externalId"],
   properties: {
     alertType: { type: "string", enum: ["new", "correction", "cancellation", "revision"] },
     flagTypes: { type: "array", items: { type: "string", enum: ["us", "state"] } },
     stateName: { type: ["string", "null"] }, stateCode: { type: ["string", "null"] },
-    geographicScope: { type: "string", enum: ["nationwide", "statewide", "county", "unknown"] },
-    countyName: { type: ["string", "null"] }, title: { type: "string" }, reason: { type: "string" },
+    geographicScope: { type: "string", enum: ["nationwide", "statewide", "county", "municipal", "unknown"] },
+    countyName: { type: ["string", "null"] }, localityName: { type: ["string", "null"] }, title: { type: "string" }, reason: { type: "string" },
     namedEntities: { type: "array", items: { type: "string" } },
-    issuingAuthority: { type: "string" }, effectiveStart: { type: "string" }, effectiveStartTime: { type: ["string", "null"] },
+    issuingAuthority: { type: "string" }, effectiveStart: { type: ["string", "null"] }, effectiveStartTime: { type: ["string", "null"] },
     effectiveEnd: { type: ["string", "null"] }, effectiveEndTime: { type: ["string", "null"] }, effectiveEndCondition: { type: ["string", "null"] },
     timeZone: { type: ["string", "null"] }, instructionText: { type: "string" }, externalId: { type: ["string", "null"] },
   },
@@ -47,7 +48,7 @@ export async function extractAfeEmail(email: InboundEmail, apiKey = process.env.
     body: JSON.stringify({
       max_tokens: 2048,
       model,
-      system: "Extract only facts explicitly present in this American Flags Express alert. Do not infer missing dates, scope, authority, or affected flags. Return null when a field is not stated. Use ISO dates only when the email states an unambiguous date. In namedEntities, list every explicitly named person and named organization mentioned in the reason text, using each name exactly as written without titles or role descriptions; use an empty array when none are named.",
+      system: "Extract only facts explicitly present in this American Flags Express alert. The actual instruction body and any proclamation determine scope; a marketing-style email heading must not broaden it. A city/town/village-only direction is municipal, and the city/town/village goes in localityName. Do not infer missing dates, scope, authority, or affected flags. Return null when a field is not stated. Use ISO dates only when the email states an unambiguous date. For cancellations, effectiveStart may be null when not stated. In namedEntities, list every explicitly named person and named organization mentioned in the reason text, using each name exactly as written without titles or role descriptions; use an empty array when none are named.",
       tools: [{ name: "extract_american_flags_express_alert", description: "Return the normalized facts explicitly present in the alert email.", strict: true, input_schema: afeExtractionSchema }],
       tool_choice: { type: "tool", name: "extract_american_flags_express_alert" },
       messages: [{ role: "user", content: emailText(email) }],
@@ -89,9 +90,20 @@ export async function summarizeAfeReason(reason: string, namedEntities: string[]
 export function validateAfeExtraction(value: AfeExtraction) {
   if (!value || !["new", "correction", "cancellation", "revision"].includes(value.alertType)) throw new Error("Invalid alert type.");
   if (!value.flagTypes?.length || value.flagTypes.some((flag) => !["us", "state"].includes(flag))) throw new Error("At least one valid flag type is required.");
-  if (!value.effectiveStart || !/^\d{4}-\d{2}-\d{2}$/.test(value.effectiveStart)) throw new Error("An ISO effective start date is required.");
+  const validIsoDate = (date: string | null) => {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date;
+  };
+  if (value.effectiveStart && !validIsoDate(value.effectiveStart)) throw new Error("Effective start must be an exact ISO date.");
+  if (value.effectiveEnd && !validIsoDate(value.effectiveEnd)) throw new Error("Effective end must be an exact ISO date.");
+  if (value.alertType !== "cancellation" && !value.effectiveStart) throw new Error("An ISO effective start date is required.");
   if (!value.reason || !value.issuingAuthority || !value.instructionText) throw new Error("Reason, authority, and original instruction text are required.");
   if (!Array.isArray(value.namedEntities) || value.namedEntities.some((name) => !name.trim())) throw new Error("Named entities must be a list of non-empty names.");
   if (value.geographicScope === "statewide" && !value.stateCode) throw new Error("Statewide orders require a state code.");
   if (value.geographicScope === "county" && (!value.stateCode || !value.countyName)) throw new Error("County orders require a state and county.");
+  if (value.geographicScope === "municipal" && (!value.stateCode || !value.localityName)) throw new Error("Municipal orders require a state and locality.");
+  if (value.timeZone) {
+    try { Intl.DateTimeFormat(undefined, { timeZone: value.timeZone }); } catch { throw new Error("A valid IANA time zone is required."); }
+  }
 }

@@ -38,7 +38,7 @@ export type HalfMastOrder = {
   sourceSnapshotId: string;
   status: OrderStatus;
   alertType?: "new" | "correction" | "cancellation" | "revision";
-  geographicScope?: "nationwide" | "statewide" | "county" | "unknown";
+  geographicScope?: "nationwide" | "statewide" | "county" | "municipal" | "unknown";
   countyName?: string;
   sourceMessageId?: string;
   createdAt: string;

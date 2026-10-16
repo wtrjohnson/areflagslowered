@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ingestAfeEmail } from "../../../../../lib/afe-ingestion.ts";
+import { notifyInboundIssue } from "../../../../../lib/monitoring.ts";
 
 function isRawMimeMessage(value: string) {
   return /^(?:[\w-]+:[^\r\n]*\r?\n){2,}\r?\n/.test(value);
@@ -32,6 +33,8 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     const result = await ingestAfeEmail(raw, { providerMessageId: providerMessageId || undefined });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Email ingestion failed." }, { status: 422 });
+    const message = error instanceof Error ? error.message : "Email ingestion failed.";
+    await notifyInboundIssue("CloudMailin processing failed", message);
+    return NextResponse.json({ error: message }, { status: 422 });
   }
 }

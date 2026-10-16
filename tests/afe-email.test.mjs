@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const { parseInboundEmail, emailText } = await import("../lib/afe-email.ts");
 const { validateAfeExtraction } = await import("../lib/afe-extractor.ts");
-const { validateAfeSender } = await import("../lib/afe-ingestion.ts");
+const { selectStrongCanonicalOrder, validateAfeSender } = await import("../lib/afe-ingestion.ts");
 const fixture = await readFile(new URL("./fixtures/Pennsylvania - Half-Staff Alert - Bryce Kaufmann.eml", import.meta.url), "utf8");
 
 test("parses the American Flags Express multipart email and quoted-printable text", () => {
@@ -63,6 +63,27 @@ test("rejects unrelated forwarded mail", () => {
 
 test("validates county alerts without allowing missing geographic fields", () => {
   assert.doesNotThrow(() => validateAfeExtraction({
-    alertType: "new", flagTypes: ["us", "state"], stateName: "Pennsylvania", stateCode: "PA", geographicScope: "county", countyName: "Erie", title: "Bryce Kaufmann", reason: "Honor of Bryce Kaufmann", namedEntities: ["Bryce Kaufmann"], issuingAuthority: "Governor Josh Shapiro", effectiveStart: "2026-09-22", effectiveStartTime: null, effectiveEnd: null, effectiveEndTime: null, effectiveEndCondition: "interment", timeZone: "America/New_York", instructionText: "Flags shall remain lowered until interment.", externalId: null,
+    alertType: "new", flagTypes: ["us", "state"], stateName: "Pennsylvania", stateCode: "PA", geographicScope: "county", countyName: "Erie", localityName: null, title: "Bryce Kaufmann", reason: "Honor of Bryce Kaufmann", namedEntities: ["Bryce Kaufmann"], issuingAuthority: "Governor Josh Shapiro", effectiveStart: "2026-09-22", effectiveStartTime: null, effectiveEnd: null, effectiveEndTime: null, effectiveEndCondition: "interment", timeZone: "America/New_York", instructionText: "Flags shall remain lowered until interment.", externalId: null,
   }));
+});
+
+test("validates municipal-only notices without treating them as statewide", () => {
+  assert.doesNotThrow(() => validateAfeExtraction({
+    alertType: "new", flagTypes: ["us", "state"], stateName: "Nebraska", stateCode: "NE", geographicScope: "municipal", countyName: null, localityName: "Yutan", title: "Wendell D. Pascarelli", reason: "Honor of Wendell D. Pascarelli", namedEntities: ["Wendell D. Pascarelli"], issuingAuthority: "Mayor Matt Thompson", effectiveStart: "2026-09-21", effectiveStartTime: null, effectiveEnd: null, effectiveEndTime: null, effectiveEndCondition: "interment", timeZone: "America/Chicago", instructionText: "Flags within the City of Yutan may be lowered to half-staff.", externalId: null,
+  }));
+});
+
+test("allows a cancellation with no repeated start date", () => {
+  assert.doesNotThrow(() => validateAfeExtraction({
+    alertType: "cancellation", flagTypes: ["us", "state"], stateName: "Minnesota", stateCode: "MN", geographicScope: "statewide", countyName: null, localityName: null, title: "Leslie R. Washington", reason: "The order is cancelled.", namedEntities: ["Leslie R. Washington"], issuingAuthority: "Governor Tim Walz", effectiveStart: null, effectiveStartTime: null, effectiveEnd: null, effectiveEndTime: null, effectiveEndCondition: null, timeZone: "America/Chicago", instructionText: "The prior order is cancelled.", externalId: null,
+  }));
+});
+
+test("updates Minnesota's canonical order only with one strong match", () => {
+  const revision = {
+    alertType: "revision", flagTypes: ["us", "state"], stateName: "Minnesota", stateCode: "MN", geographicScope: "statewide", countyName: null, localityName: null, title: "Leslie R. Washington", reason: "In honor and remembrance of Leslie R. Washington.", namedEntities: ["Leslie R. Washington"], issuingAuthority: "Governor Tim Walz", effectiveStart: "2026-08-14", effectiveStartTime: null, effectiveEnd: "2026-08-19", effectiveEndTime: null, effectiveEndCondition: null, timeZone: "America/Chicago", instructionText: "Flags shall fly at half-staff through August 19.", externalId: null,
+  };
+  const original = { scope: "statewide", flagTypes: ["us", "state"], effectiveStart: "2026-08-14", issuingAuthority: "Governor Tim Walz", title: "Leslie R. Washington", reason: "In honor and remembrance of Leslie R. Washington." };
+  assert.equal(selectStrongCanonicalOrder([original], revision), original);
+  assert.equal(selectStrongCanonicalOrder([original, { ...original }], revision), undefined);
 });
