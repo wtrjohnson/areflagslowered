@@ -254,11 +254,15 @@ export default function Home() {
 
 function FlagDisplay({ result, kind, stateName, stateCode }: { result?: FlagResult; kind: "us" | "state"; stateName?: string; stateCode?: string }) {
   const status = result?.status || "uncertain";
+  const flagSrc = kind === "us" ? "https://flagcdn.com/us.svg" : stateCode ? `https://flagcdn.com/us-${stateCode.toLowerCase()}.svg` : null;
   return (
     <article className={`flag-display flag-${kind} flag-${status} ${stateCode ? `flag-state-${stateCode}` : ""}`}>
       <div className="flag-stage" aria-hidden="true">
         <div className="flag-pole" />
-        <div className="flag-cloth"><span /><span /><span /><span /><span /></div>
+        <div className="flag-cloth">
+          <span /><span /><span /><span /><span />
+          {flagSrc && <img className="flag-art" src={flagSrc} alt="" onError={(event) => { event.currentTarget.hidden = true; }} />}
+        </div>
       </div>
       <p className="flag-name">{kind === "us" ? "U.S. flag" : `${stateName} flag`}</p>
       <p className="flag-status">{statusLabel(status)}</p>
