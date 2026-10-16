@@ -38,18 +38,11 @@ button, input { font: inherit; }
 .flag-display { min-width: 0; }
 .flag-stage { position: relative; height: 270px; }
 .flag-pole { position: absolute; left: 15px; top: 0; bottom: 10px; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
-.flag-cloth { position: absolute; left: 23px; top: 8px; width: min(64%, 270px); aspect-ratio: 1.9 / 1; overflow: hidden; background: var(--ink); box-shadow: 0 5px 0 rgba(17,17,17,.06); transform: translateY(var(--mast-offset, 0)); transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease; will-change: transform; }
-.flag-us .flag-cloth { background: repeating-linear-gradient(to bottom, #151515 0 10%, #f1f1ed 10% 20%); }
-.flag-us .flag-cloth::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 34%; background: #151515; }
-.flag-cloth span { position: relative; z-index: 1; display: block; height: 20%; border-bottom: 1px solid rgba(255,255,255,.28); }
-.flag-state .flag-cloth { background: #202020; }
-.flag-state .flag-cloth span { display: none; }
-.flag-state-OK .flag-cloth { background: #1d526f; }
-.flag-state-OK .flag-cloth::after { content: ""; position: absolute; left: 50%; top: 50%; width: 25%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: #e9e4d8; box-shadow: 0 0 0 7px #b9272e, 0 0 0 13px #e9e4d8; }
-.flag-state-OK .flag-cloth::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9%; height: 36%; transform: translate(-50%, -50%); background: #b9272e; z-index: 1; }
-.flag-state .flag-cloth::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 49%, rgba(255,255,255,.16) 50%, transparent 51%); }
-.flag-art { position: absolute; z-index: 2; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; background: var(--paper); }
+.flag-cloth { position: absolute; left: 23px; top: 8px; width: min(64%, 270px); aspect-ratio: 1.9 / 1; overflow: hidden; background: #e5e5e1; box-shadow: 0 5px 0 rgba(17,17,17,.06); transform: translateY(var(--mast-offset, 0)); transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease; will-change: transform; }
+.flag-cloth span { display: none; }
+.flag-art { position: absolute; z-index: 2; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
 .flag-art[hidden] { display: none; }
+.flag-cloth[data-asset-missing="true"]::after { content: "Flag unavailable"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .flag-half_mast .flag-cloth { --mast-offset: 78px; }
 .flag-uncertain .flag-cloth { --mast-offset: 42px; opacity: .45; border: 2px dashed var(--warning); background: transparent; }
 .flag-uncertain .flag-cloth::after { display: none; }
