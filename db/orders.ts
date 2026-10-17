@@ -34,6 +34,13 @@ function mapOrder(row: { orders: typeof orders.$inferSelect; jurisdictions: type
   };
 }
 
+export async function getOrderById(db: Database, id: string) {
+  const row = (await db.select().from(orders)
+    .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
+    .where(eq(orders.id, id)))[0];
+  return row ? mapOrder(row) : undefined;
+}
+
 export async function listActiveOrders(db: Database, date: string) {
   const rows = await db.select().from(orders)
     .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))

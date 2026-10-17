@@ -1,4 +1,5 @@
 import type { HalfMastOrder, SocialDraft } from "./types.ts";
+import { jurisdictionByCode } from "./jurisdictions.ts";
 
 export function createSocialDraft(order: HalfMastOrder, createdAt = new Date().toISOString()): SocialDraft {
   const dates = order.effectiveEnd
@@ -15,6 +16,18 @@ export function createSocialDraft(order: HalfMastOrder, createdAt = new Date().t
 
 const X_POST_MAX_LENGTH = 280;
 const ARE_FLAGS_LOWERED_URL = process.env.ARE_FLAGS_LOWERED_URL || "https://are-flags-lowered.kvex.chatgpt.site";
+
+export function xDraftId(order: HalfMastOrder) {
+  return `x-${order.id}-${order.sourceSnapshotId}`;
+}
+
+export function jurisdictionUrl(order: HalfMastOrder, shareToken?: string) {
+  const jurisdiction = jurisdictionByCode(order.jurisdiction.stateCode || "");
+  if (!jurisdiction) throw new Error("A supported jurisdiction is required for an X post.");
+  const url = new URL(`/${jurisdiction.slug}`, ARE_FLAGS_LOWERED_URL);
+  if (shareToken) url.searchParams.set("share", shareToken);
+  return url.toString();
+}
 
 function truncate(value: string, maxLength: number) {
   const characters = Array.from(value.trim());
@@ -46,22 +59,23 @@ function formatXDates(start: string, end?: string) {
  * is part of the ID so a correction becomes a distinct post while retries of the
  * same inbound email remain idempotent.
  */
-export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().toISOString()): SocialDraft {
+export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().toISOString(), shareToken?: string): SocialDraft {
   const isCorrection = order.alertType === "correction" || order.alertType === "revision";
   const intro = isCorrection
     ? `CORRECTION to ${order.jurisdiction.name} half-mast order:`
     : `${order.jurisdiction.name} half-mast order:`;
   const dates = isCorrection ? undefined : formatXDates(order.effectiveStart, order.effectiveEnd);
-  const fixedText = [intro, dates, "", ARE_FLAGS_LOWERED_URL].filter((value) => value !== undefined).join("\n");
+  const publicUrl = jurisdictionUrl(order, shareToken);
+  const fixedText = [intro, dates, "", publicUrl].filter((value) => value !== undefined).join("\n");
   const availableForBody = Math.max(0, X_POST_MAX_LENGTH - Array.from(fixedText).length - 1);
   const reason = truncate(order.reason, availableForBody);
   return {
-    id: `x-${order.id}-${order.sourceSnapshotId}`,
+    id: xDraftId(order),
     orderId: order.id,
     status: "draft",
     createdAt,
     text: isCorrection
-      ? `${intro} ${reason}\n\n${ARE_FLAGS_LOWERED_URL}`
-      : `${intro} ${reason}\n${dates}\n\n${ARE_FLAGS_LOWERED_URL}`,
+      ? `${intro} ${reason}\n\n${publicUrl}`
+      : `${intro} ${reason}\n${dates}\n\n${publicUrl}`,
   };
 }

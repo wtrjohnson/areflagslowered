@@ -1,8 +1,10 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { socialDrafts } from "../db/schema.ts";
+import { getOrderById } from "../db/orders.ts";
 import type { getDb } from "../db/index.ts";
 import { notifyInboundIssue } from "./monitoring.ts";
-import { createXPostDraft } from "./social.ts";
+import { createXPostDraft, xDraftId } from "./social.ts";
+import { ensurePreviewSnapshot } from "./social-preview.ts";
 import { getXAccessToken } from "./x-oauth.ts";
 import type { HalfMastOrder } from "./types.ts";
 
@@ -70,16 +72,26 @@ async function publishClaimedDraft(db: Database, id: string, text: string, token
  * a duplicate public post; operators can inspect the alert and retry safely.
  */
 export async function queueAndPublishXPost(db: Database, order: HalfMastOrder): Promise<XPublishResult> {
-  const draft = createXPostDraft(order);
-  await db.insert(socialDrafts).values({
-    id: draft.id,
-    orderId: draft.orderId,
-    text: draft.text,
-    status: "draft",
-    createdAt: new Date(draft.createdAt),
-  }).onConflictDoNothing({ target: socialDrafts.id });
-
   await ensureDeliveryMetadata(db);
+  const id = xDraftId(order);
+  await db.insert(socialDrafts).values({
+    id,
+    orderId: order.id,
+    text: "",
+    status: "draft",
+  }).onConflictDoNothing({ target: socialDrafts.id });
+  let draft;
+  try {
+    const preview = await ensurePreviewSnapshot(db, order, id);
+    draft = createXPostDraft(order, new Date().toISOString(), preview.token);
+    await db.update(socialDrafts).set({ text: draft.text, publishError: null }).where(eq(socialDrafts.id, id));
+  } catch (error) {
+    const message = `Preview snapshot failed: ${errorMessage(error)}`;
+    await db.update(socialDrafts).set({ status: "approved", publishError: message }).where(eq(socialDrafts.id, id));
+    await notifyInboundIssue("X preview needs attention", `${order.jurisdiction.name}\n${message}\nDraft: ${id}`);
+    return { status: "failed", error: message };
+  }
+
   const token = await xAccessToken(db);
   if (!token) return { status: "queued" };
 
@@ -98,10 +110,22 @@ export async function retryXPost(db: Database, id: string): Promise<XPublishResu
   const draft = (await db.select().from(socialDrafts).where(eq(socialDrafts.id, id)))[0];
   if (!draft) throw new Error("X draft not found.");
   if (draft.status === "published") return { status: "already_handled", postId: draft.externalPostId || undefined };
+  const order = await getOrderById(db, draft.orderId);
+  if (!order) return { status: "failed", error: "The order for this X draft no longer exists." };
+  let text: string;
+  try {
+    const preview = await ensurePreviewSnapshot(db, order, id);
+    text = createXPostDraft(order, draft.createdAt.toISOString(), preview.token).text;
+    await db.update(socialDrafts).set({ text, publishError: null }).where(eq(socialDrafts.id, id));
+  } catch (error) {
+    const message = `Preview snapshot failed: ${errorMessage(error)}`;
+    await db.update(socialDrafts).set({ publishError: message }).where(eq(socialDrafts.id, id));
+    return { status: "failed", error: message };
+  }
   const token = await xAccessToken(db);
   if (!token) return { status: "queued", error: "X is not connected." };
   await db.update(socialDrafts).set({ status: "approved", publishAttempts: sql`${socialDrafts.publishAttempts} + 1`, lastAttemptAt: new Date(), publishError: null }).where(eq(socialDrafts.id, id));
-  return publishClaimedDraft(db, id, draft.text, token);
+  return publishClaimedDraft(db, id, text, token);
 }
 
 export async function xPublishingStatus(db: Database) {

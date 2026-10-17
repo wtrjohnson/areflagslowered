@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { answerStatus } from "../lib/answer-engine.ts";
-import { jurisdictionCatalog } from "../lib/jurisdictions.ts";
+import { jurisdictionByCode, jurisdictionCatalog } from "../lib/jurisdictions.ts";
 import { flagAssetPath } from "../lib/flag-assets.ts";
 import type { StatusAnswer, FlagResult, Jurisdiction } from "../lib/types.ts";
 
@@ -52,13 +52,14 @@ function relativeTime(value: string, now: number) {
   return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-export default function Home() {
-  const [selectedState, setSelectedState] = useState(defaultState);
+export default function Home({ initialStateCode = "VA" }: { initialStateCode?: string }) {
+  const initialState = jurisdictionByCode(initialStateCode) || defaultState;
+  const [selectedState, setSelectedState] = useState(initialState);
   const [stateOpen, setStateOpen] = useState(false);
   const [stateQuery, setStateQuery] = useState("");
-  const [focusedStateId, setFocusedStateId] = useState(defaultState.id);
+  const [focusedStateId, setFocusedStateId] = useState(initialState.id);
   const [menuStatuses, setMenuStatuses] = useState<Record<string, MenuStatus>>({});
-  const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(defaultState, today));
+  const [answer, setAnswer] = useState<StatusAnswer>(() => fallbackAnswer(initialState, today));
   const [loading, setLoading] = useState(true);
   const [refreshingState, setRefreshingState] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -91,11 +92,13 @@ export default function Home() {
       if (statusRequestRef.current !== requestId) return;
       setAnswer(nextAnswer);
       setSelectedState(state);
+      window.history.replaceState(null, "", `/${state.slug}`);
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       if (statusRequestRef.current !== requestId) return;
       setAnswer(fallbackAnswer(state, today));
       setSelectedState(state);
+      window.history.replaceState(null, "", `/${state.slug}`);
     } finally {
       if (statusRequestRef.current !== requestId) return;
       setLoading(false);
@@ -140,7 +143,7 @@ export default function Home() {
   useEffect(() => {
     const controller = new AbortController();
     const requestId = ++statusRequestRef.current;
-    fetchStatusAnswer(defaultState, controller.signal)
+    fetchStatusAnswer(initialState, controller.signal)
       .then((nextAnswer) => {
         if (statusRequestRef.current === requestId) setAnswer(nextAnswer);
       })
@@ -154,7 +157,7 @@ export default function Home() {
         setRefreshingState(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [initialState]);
 
   const moveActiveState = (direction: number) => {
     if (!filteredStates.length) return;

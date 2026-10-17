@@ -185,6 +185,18 @@ export const socialDrafts = pgTable("social_drafts", {
   lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
 });
 
+export const socialPreviewSnapshots = pgTable("social_preview_snapshots", {
+  token: text("token").primaryKey(),
+  socialDraftId: text("social_draft_id").notNull().references(() => socialDrafts.id),
+  jurisdictionId: text("jurisdiction_id").notNull().references(() => jurisdictions.id),
+  usStatus: currentStatusValue("us_status").notNull(),
+  stateStatus: currentStatusValue("state_status").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  socialDraftIdx: uniqueIndex("social_preview_snapshots_draft_idx").on(table.socialDraftId),
+  jurisdictionIdx: index("social_preview_snapshots_jurisdiction_idx").on(table.jurisdictionId),
+}));
+
 export const xOAuthConnections = pgTable("x_oauth_connections", {
   id: text("id").primaryKey(),
   accountHandle: text("account_handle").notNull(),
