@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { socialDrafts } from "../db/schema.ts";
 import type { getDb } from "../db/index.ts";
 import { notifyInboundIssue } from "./monitoring.ts";
@@ -9,7 +9,7 @@ import type { HalfMastOrder } from "./types.ts";
 type Database = ReturnType<typeof getDb>;
 type XPublishStatus = "posted" | "queued" | "already_handled" | "failed";
 
-export type XPublishResult = { status: XPublishStatus; postId?: string };
+export type XPublishResult = { status: XPublishStatus; postId?: string; error?: string };
 
 function xPublishingEnabled() {
   return process.env.X_POSTING_ENABLED === "true";
@@ -32,6 +32,37 @@ async function createXPost(token: string, text: string) {
   return payload.data.id;
 }
 
+async function ensureDeliveryMetadata(db: Database) {
+  await db.execute(sql`ALTER TABLE "social_drafts" ADD COLUMN IF NOT EXISTS "published_at" timestamp with time zone`);
+  await db.execute(sql`ALTER TABLE "social_drafts" ADD COLUMN IF NOT EXISTS "external_post_id" text`);
+  await db.execute(sql`ALTER TABLE "social_drafts" ADD COLUMN IF NOT EXISTS "publish_error" text`);
+  await db.execute(sql`ALTER TABLE "social_drafts" ADD COLUMN IF NOT EXISTS "publish_attempts" integer DEFAULT 0 NOT NULL`);
+  await db.execute(sql`ALTER TABLE "social_drafts" ADD COLUMN IF NOT EXISTS "last_attempt_at" timestamp with time zone`);
+}
+
+async function xAccessToken(db: Database) {
+  if (!xPublishingEnabled()) return undefined;
+  try {
+    return await getXAccessToken(db);
+  } catch (error) {
+    await notifyInboundIssue("X authorization needs attention", errorMessage(error));
+    return undefined;
+  }
+}
+
+async function publishClaimedDraft(db: Database, id: string, text: string, token: string): Promise<XPublishResult> {
+  try {
+    const postId = await createXPost(token, text);
+    await db.update(socialDrafts).set({ status: "published", externalPostId: postId, publishedAt: new Date(), publishError: null }).where(eq(socialDrafts.id, id));
+    return { status: "posted", postId };
+  } catch (error) {
+    const message = errorMessage(error);
+    await db.update(socialDrafts).set({ publishError: message }).where(eq(socialDrafts.id, id));
+    await notifyInboundIssue("X post needs attention", `@${(process.env.X_ACCOUNT_HANDLE || "areflagslowered").replace(/^@/, "")}\n${message}\nDraft: ${id}`);
+    return { status: "failed", error: message };
+  }
+}
+
 /**
  * Saves every eligible public alert before attempting a post. A row may be
  * claimed only once, which makes duplicate webhook deliveries harmless. Failed
@@ -48,30 +79,44 @@ export async function queueAndPublishXPost(db: Database, order: HalfMastOrder): 
     createdAt: new Date(draft.createdAt),
   }).onConflictDoNothing({ target: socialDrafts.id });
 
-  if (!xPublishingEnabled()) return { status: "queued" };
-
-  let token: string | undefined;
-  try {
-    token = await getXAccessToken(db);
-  } catch (error) {
-    await notifyInboundIssue("X authorization needs attention", errorMessage(error));
-    return { status: "queued" };
-  }
+  await ensureDeliveryMetadata(db);
+  const token = await xAccessToken(db);
   if (!token) return { status: "queued" };
 
   const claimed = await db.update(socialDrafts)
-    .set({ status: "approved" })
+    .set({ status: "approved", publishAttempts: sql`${socialDrafts.publishAttempts} + 1`, lastAttemptAt: new Date(), publishError: null })
     .where(and(eq(socialDrafts.id, draft.id), eq(socialDrafts.status, "draft")))
     .returning({ id: socialDrafts.id, text: socialDrafts.text });
   if (!claimed[0]) return { status: "already_handled" };
 
-  try {
-    const postId = await createXPost(token, claimed[0].text);
-    await db.update(socialDrafts).set({ status: "published" }).where(eq(socialDrafts.id, draft.id));
-    return { status: "posted", postId };
-  } catch (error) {
-    const message = errorMessage(error);
-    await notifyInboundIssue("X post needs attention", `@${(process.env.X_ACCOUNT_HANDLE || "areflagslowered").replace(/^@/, "")}\n${message}\nDraft: ${draft.id}`);
-    return { status: "failed" };
-  }
+  return publishClaimedDraft(db, draft.id, claimed[0].text, token);
+}
+
+export async function retryXPost(db: Database, id: string): Promise<XPublishResult> {
+  if (!id.startsWith("x-")) throw new Error("Only X publishing drafts can be retried.");
+  await ensureDeliveryMetadata(db);
+  const draft = (await db.select().from(socialDrafts).where(eq(socialDrafts.id, id)))[0];
+  if (!draft) throw new Error("X draft not found.");
+  if (draft.status === "published") return { status: "already_handled", postId: draft.externalPostId || undefined };
+  const token = await xAccessToken(db);
+  if (!token) return { status: "queued", error: "X is not connected." };
+  await db.update(socialDrafts).set({ status: "approved", publishAttempts: sql`${socialDrafts.publishAttempts} + 1`, lastAttemptAt: new Date(), publishError: null }).where(eq(socialDrafts.id, id));
+  return publishClaimedDraft(db, id, draft.text, token);
+}
+
+export async function xPublishingStatus(db: Database) {
+  await ensureDeliveryMetadata(db);
+  const drafts = await db.select({
+    id: socialDrafts.id,
+    orderId: socialDrafts.orderId,
+    text: socialDrafts.text,
+    status: socialDrafts.status,
+    createdAt: socialDrafts.createdAt,
+    publishedAt: socialDrafts.publishedAt,
+    externalPostId: socialDrafts.externalPostId,
+    publishError: socialDrafts.publishError,
+    publishAttempts: socialDrafts.publishAttempts,
+    lastAttemptAt: socialDrafts.lastAttemptAt,
+  }).from(socialDrafts).where(sql`${socialDrafts.id} LIKE 'x-%'`).orderBy(desc(socialDrafts.createdAt)).limit(20);
+  return { connected: Boolean(await xAccessToken(db)), drafts };
 }

@@ -178,6 +178,11 @@ export const socialDrafts = pgTable("social_drafts", {
   text: text("text").notNull(),
   status: socialDraftStatus("status").notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  externalPostId: text("external_post_id"),
+  publishError: text("publish_error"),
+  publishAttempts: integer("publish_attempts").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
 });
 
 export const xOAuthConnections = pgTable("x_oauth_connections", {
