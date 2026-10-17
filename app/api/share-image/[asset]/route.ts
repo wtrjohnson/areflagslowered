@@ -28,7 +28,7 @@ function flagGroup(src: string, status: PreviewStatus) {
       top: presentation.offset,
       width: previewGeometry.flagWidth,
       height: previewGeometry.flagHeight,
-      objectFit: "contain",
+      objectFit: "fill",
       opacity: presentation.opacity,
     },
   }));

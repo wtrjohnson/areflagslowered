@@ -39,6 +39,7 @@ export async function getPreviewByDraft(db: Database, socialDraftId: string) {
 
 export async function getPreviewByToken(db: Database, token: string) {
   if (!validShareToken(token)) return undefined;
+  await ensurePreviewTable(db);
   return (await db.select().from(socialPreviewSnapshots).where(eq(socialPreviewSnapshots.token, token)))[0] as PreviewSnapshot | undefined;
 }
 
