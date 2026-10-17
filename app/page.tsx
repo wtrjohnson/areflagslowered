@@ -30,6 +30,13 @@ function fallbackAnswer(state: Jurisdiction, date: string) {
   return answerStatus({ location: state.name, stateCode: state.stateCode, date, checkedAt: `${today}T12:00:00.000Z` });
 }
 
+async function fetchStatusAnswer(state: Jurisdiction, signal: AbortSignal) {
+  const params = new URLSearchParams({ location: state.name, state: state.stateCode || "", date: today });
+  const response = await fetch(`/api/status?${params}`, { signal });
+  if (!response.ok) throw new Error("Status unavailable");
+  return response.json() as Promise<StatusAnswer>;
+}
+
 function menuStatusLabel(status: MenuStatus) {
   return status === "half_mast" ? "Half-mast" : status === "below_us" ? "Below U.S." : status === "uncertain" ? "Review" : "Full mast";
 }
@@ -73,13 +80,27 @@ export default function Home() {
     if (returnFocus) requestAnimationFrame(() => stateTriggerRef.current?.focus());
   };
 
-  const selectState = (state: Jurisdiction) => {
+  const selectState = async (state: Jurisdiction) => {
+    const requestId = ++statusRequestRef.current;
     setLoading(true);
     setRefreshingState(true);
-    setAnswer(fallbackAnswer(state, today));
-    setSelectedState(state);
     setFocusedStateId(state.id);
     closePicker(true);
+    try {
+      const nextAnswer = await fetchStatusAnswer(state, AbortSignal.timeout(10_000));
+      if (statusRequestRef.current !== requestId) return;
+      setAnswer(nextAnswer);
+      setSelectedState(state);
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (statusRequestRef.current !== requestId) return;
+      setAnswer(fallbackAnswer(state, today));
+      setSelectedState(state);
+    } finally {
+      if (statusRequestRef.current !== requestId) return;
+      setLoading(false);
+      setRefreshingState(false);
+    }
   };
 
   useEffect(() => {
@@ -119,16 +140,13 @@ export default function Home() {
   useEffect(() => {
     const controller = new AbortController();
     const requestId = ++statusRequestRef.current;
-    const params = new URLSearchParams({ location: selectedState.name, state: selectedState.stateCode || "", date: today });
-    fetch(`/api/status?${params}`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Status unavailable");
-        return response.json() as Promise<StatusAnswer>;
+    fetchStatusAnswer(defaultState, controller.signal)
+      .then((nextAnswer) => {
+        if (statusRequestRef.current === requestId) setAnswer(nextAnswer);
       })
-      .then(setAnswer)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setAnswer(fallbackAnswer(selectedState, today));
+        if (statusRequestRef.current === requestId) setAnswer(fallbackAnswer(defaultState, today));
       })
       .finally(() => {
         if (statusRequestRef.current !== requestId) return;
@@ -136,7 +154,7 @@ export default function Home() {
         setRefreshingState(false);
       });
     return () => controller.abort();
-  }, [selectedState]);
+  }, []);
 
   const moveActiveState = (direction: number) => {
     if (!filteredStates.length) return;
