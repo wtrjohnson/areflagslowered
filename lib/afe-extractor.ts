@@ -83,7 +83,14 @@ export async function summarizeAfeReason(reason: string, namedEntities: string[]
   if (!summary) throw new Error("Anthropic reason summary returned no text.");
   const cleaned = summary.replace(/^['\"]|['\"]$/g, "");
   const missingNames = namedEntities.filter((name) => name && !cleaned.toLocaleLowerCase().includes(name.toLocaleLowerCase()));
-  if (missingNames.length) throw new Error(`Reason summary omitted required names: ${missingNames.join(", ")}.`);
+  if (missingNames.length) {
+    // The source wording is preferable to rejecting an otherwise valid alert
+    // when a summarization model drops a required name.
+    const sourceWording = reason.replace(/\s+/g, " ").trim();
+    const missingFromSource = namedEntities.filter((name) => name && !sourceWording.toLocaleLowerCase().includes(name.toLocaleLowerCase()));
+    if (!missingFromSource.length) return sourceWording;
+    throw new Error(`Reason summary omitted required names: ${missingNames.join(", ")}.`);
+  }
   return cleaned;
 }
 

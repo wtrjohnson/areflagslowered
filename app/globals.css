@@ -4,6 +4,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
 button, input { font: inherit; }
+textarea, select { font: inherit; }
 .status-page { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 20px 48px 32px; }
 .masthead { display: flex; justify-content: center; align-items: baseline; gap: 12px; }
 .brand, .brand-answer { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 400; letter-spacing: -.07em; }
@@ -81,3 +82,40 @@ button, input { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.test-console { max-width: 980px; margin: 0 auto; padding: 32px 28px 64px; }
+.test-console-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--ink); padding-bottom: 12px; }
+.test-console-header p { margin: 0; font-size: 15px; color: var(--muted); }
+.test-console-header .brand { color: var(--ink); font-size: 26px; }
+.test-intro { max-width: 640px; margin: 44px 0 26px; }
+.test-intro h1, .test-result h2 { margin: 0; letter-spacing: -.05em; }
+.test-intro h1 { font-size: clamp(32px, 5vw, 52px); }
+.test-intro p { margin: 10px 0 0; color: var(--muted); font-size: 17px; line-height: 1.45; }
+.test-form { border: 1px solid var(--ink); background: #fff; padding: 22px; }
+.test-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.test-form legend { margin-bottom: 14px; font-weight: 700; }
+.test-mode { display: flex; gap: 8px; margin-bottom: 20px; }
+.test-mode button, .test-run { border: 1px solid var(--ink); background: var(--paper); color: var(--ink); padding: 9px 12px; cursor: pointer; }
+.test-mode button.selected, .test-run { background: var(--ink); color: #fff; }
+.test-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.test-form label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+.test-form label small { font-size: 11px; }
+.test-form input, .test-form textarea, .test-form select { width: 100%; border: 1px solid var(--line); border-radius: 0; padding: 10px; background: #fff; color: var(--ink); }
+.test-form textarea { resize: vertical; line-height: 1.4; }
+.test-wide { grid-column: 1 / -1; }
+.test-run { display: block; width: 100%; margin-top: 22px; font-weight: 700; }
+.test-run:disabled { cursor: wait; opacity: .65; }
+.test-error { margin: 18px 0 0; border-left: 4px solid #b42318; padding: 12px 14px; background: #fff0ef; color: #8a1810; }
+.test-result { display: grid; gap: 18px; margin-top: 28px; border: 1px solid var(--ink); padding: 22px; background: #fff; }
+.test-result h2 { font-size: 23px; }
+.test-result-note { margin: 5px 0 0; color: var(--muted); line-height: 1.4; }
+.test-preview { display: flex; justify-content: center; gap: 80px; overflow: hidden; padding: 20px 0 0; background: var(--paper); }
+.test-flag-group { position: relative; width: 278px; height: 270px; flex: 0 0 278px; }
+.test-pole { position: absolute; inset: 0 auto 0 0; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
+.test-flag-art { position: absolute; left: 8px; top: 0; display: block; width: 270px; height: calc(270px * 350 / 559); object-fit: fill; transform: translateY(0); }
+.test-flag-half_mast { transform: translateY(calc((270px - (270px * 350 / 559)) / 2)); }
+.test-flag-uncertain { transform: translateY(42px); opacity: .45; }
+.test-output pre { overflow-x: auto; margin: 8px 0; padding: 14px; background: var(--paper); white-space: pre-wrap; font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.test-output p { overflow-wrap: anywhere; }
+.test-result ul { display: grid; gap: 5px; margin: 0; padding-left: 19px; color: var(--muted); font-size: 13px; }
+@media (max-width: 680px) { .test-console { padding: 24px 18px 48px; } .test-console-header { align-items: flex-start; flex-direction: column; } .test-fields { grid-template-columns: 1fr; } .test-preview { justify-content: flex-start; gap: 28px; overflow-x: auto; } }
