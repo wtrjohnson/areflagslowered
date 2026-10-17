@@ -38,9 +38,9 @@ button, input { font: inherit; }
 .flag-display { min-width: 0; }
 .flag-stage { position: relative; height: 270px; }
 .flag-pole { position: absolute; left: 15px; top: 0; bottom: 10px; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
-.flag-cloth { position: absolute; left: 23px; top: 8px; width: min(64%, 270px); aspect-ratio: 1.9 / 1; overflow: hidden; background: #e5e5e1; box-shadow: 0 5px 0 rgba(17,17,17,.06); transform: translateY(var(--mast-offset, 0)); transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease; will-change: transform; }
+.flag-cloth { position: absolute; left: 23px; top: 8px; width: min(64%, 270px); aspect-ratio: 1.9 / 1; overflow: hidden; box-shadow: 0 5px 0 rgba(17,17,17,.06); transform: translateY(var(--mast-offset, 0)); transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease; will-change: transform; }
 .flag-cloth span { display: none; }
-.flag-art { position: absolute; z-index: 2; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
+.flag-art { position: absolute; z-index: 2; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; }
 .flag-art[hidden] { display: none; }
 .flag-cloth[data-asset-missing="true"]::after { content: "Flag unavailable"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .flag-half_mast .flag-cloth { --mast-offset: 78px; }
