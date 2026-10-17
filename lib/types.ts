@@ -67,6 +67,6 @@ export type SocialDraft = {
   id: string;
   orderId: string;
   text: string;
-  status: "draft" | "approved" | "rejected";
+  status: "draft" | "approved" | "rejected" | "published";
   createdAt: string;
 };
