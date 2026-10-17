@@ -37,6 +37,7 @@ test("X test posts are clearly labelled and retain a real-sized share token", ()
     jurisdiction: { id: "nj", name: "New Jersey", stateCode: "NJ", level: "state" }, flagTypes: ["state"], scope: "statewide", instructionType: "order", instructionText: "Test", effectiveStart: "2026-10-17", sourceUrl: "https://example.com", sourceSnapshotId: "test-snapshot", status: "needs_review", createdAt: "2026-10-17T00:00:00.000Z",
   }, "2026-10-17T00:00:00.000Z", token);
   assert.match(draft.text, /^TEST — New Jersey half-mast alert:/);
+  assert.match(draft.text, /See current flag status and official source details:/);
   assert.match(draft.text, /\/new-jersey\?share=Zk4p8N2q7Rw3Vt6Bx9LmQa$/);
   assert.ok(Array.from(draft.text).length <= 280);
 });

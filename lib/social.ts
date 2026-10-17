@@ -16,6 +16,7 @@ export function createSocialDraft(order: HalfMastOrder, createdAt = new Date().t
 
 const X_POST_MAX_LENGTH = 280;
 const ARE_FLAGS_LOWERED_URL = process.env.ARE_FLAGS_LOWERED_URL || "https://are-flags-lowered.kvex.chatgpt.site";
+const X_STATUS_LINK_CTA = "See current flag status and official source details:";
 
 export function xDraftId(order: HalfMastOrder) {
   return `x-${order.id}-${order.sourceSnapshotId}`;
@@ -66,7 +67,7 @@ export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().to
     : `${order.jurisdiction.name} half-mast order:`;
   const dates = isCorrection ? undefined : formatXDates(order.effectiveStart, order.effectiveEnd);
   const publicUrl = jurisdictionUrl(order, shareToken);
-  const fixedText = [intro, dates, "", publicUrl].filter((value) => value !== undefined).join("\n");
+  const fixedText = [intro, dates, "", X_STATUS_LINK_CTA, publicUrl].filter((value) => value !== undefined).join("\n");
   const availableForBody = Math.max(0, X_POST_MAX_LENGTH - Array.from(fixedText).length - 1);
   const reason = truncate(order.reason, availableForBody);
   return {
@@ -75,8 +76,8 @@ export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().to
     status: "draft",
     createdAt,
     text: isCorrection
-      ? `${intro} ${reason}\n\n${publicUrl}`
-      : `${intro} ${reason}\n${dates}\n\n${publicUrl}`,
+      ? `${intro} ${reason}\n\n${X_STATUS_LINK_CTA}\n${publicUrl}`
+      : `${intro} ${reason}\n${dates}\n\n${X_STATUS_LINK_CTA}\n${publicUrl}`,
   };
 }
 
@@ -85,13 +86,13 @@ export function createXTestPostDraft(order: HalfMastOrder, createdAt = new Date(
   const intro = `TEST — ${order.jurisdiction.name} half-mast alert:`;
   const dates = formatXDates(order.effectiveStart, order.effectiveEnd);
   const publicUrl = jurisdictionUrl(order, shareToken);
-  const fixedText = [intro, dates, "", publicUrl].join("\n");
+  const fixedText = [intro, dates, "", X_STATUS_LINK_CTA, publicUrl].join("\n");
   const reason = truncate(order.reason, Math.max(0, X_POST_MAX_LENGTH - Array.from(fixedText).length - 1));
   return {
     id: `x-test-${shareToken}`,
     orderId: order.id,
     status: "draft",
     createdAt,
-    text: `${intro} ${reason}\n${dates}\n\n${publicUrl}`,
+    text: `${intro} ${reason}\n${dates}\n\n${X_STATUS_LINK_CTA}\n${publicUrl}`,
   };
 }
