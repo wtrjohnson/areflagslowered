@@ -7,7 +7,7 @@ import type { HalfMastOrder } from "./types.ts";
 import { createShareToken, validShareToken } from "./share-preview-core.ts";
 import type { PreviewStatus } from "./share-preview-core.ts";
 
-export { createShareToken, previewAltText, validShareToken } from "./share-preview-core.ts";
+export { createShareToken, previewAltText, previewTitle, validShareToken } from "./share-preview-core.ts";
 export type { PreviewStatus } from "./share-preview-core.ts";
 
 type Database = ReturnType<typeof getDb>;

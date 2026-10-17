@@ -19,3 +19,20 @@ export function previewAltText(jurisdiction: JurisdictionDefinition, usStatus: P
   const label = (status: PreviewStatus) => status === "half_mast" ? "at half-mast" : status === "uncertain" ? "with position uncertain" : status === "below_us" ? "at full mast in the below-U.S. display position" : "at full mast";
   return `U.S. flag ${label(usStatus)} and ${jurisdiction.name} flag ${label(stateStatus)}.`;
 }
+
+/** A concise, status-led title for social link cards. */
+export function previewTitle(jurisdiction: JurisdictionDefinition, usStatus: PreviewStatus, stateStatus: PreviewStatus) {
+  if (usStatus === "uncertain" || stateStatus === "uncertain") {
+    return `${jurisdiction.name} flag status needs review`;
+  }
+  if (usStatus === "half_mast" && stateStatus === "half_mast") {
+    return `U.S. and ${jurisdiction.name} flags at half-mast`;
+  }
+  if (stateStatus === "half_mast") {
+    return `${jurisdiction.name} flag at half-mast`;
+  }
+  if (usStatus === "half_mast") {
+    return `U.S. flag at half-mast — ${jurisdiction.name}`;
+  }
+  return `${jurisdiction.name} flag at full mast`;
+}

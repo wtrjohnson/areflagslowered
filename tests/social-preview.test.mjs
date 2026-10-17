@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const { jurisdictionByCode, jurisdictionBySlug, jurisdictionCatalog, reservedJurisdictionSlugs } = await import("../lib/jurisdictions.ts");
-const { createShareToken, previewAltText, validShareToken } = await import("../lib/share-preview-core.ts");
+const { createShareToken, previewAltText, previewTitle, validShareToken } = await import("../lib/share-preview-core.ts");
 const { previewFlagPresentation, previewGeometry } = await import("../lib/preview-image.ts");
 
 test("every jurisdiction has a unique canonical slug and flag asset", () => {
@@ -40,4 +40,12 @@ test("preview geometry defines exact full, half, below-US, and uncertain positio
 test("preview alt text describes both immutable flag positions", () => {
   const jurisdiction = jurisdictionBySlug("south-carolina");
   assert.equal(previewAltText(jurisdiction, "full_mast", "half_mast"), "U.S. flag at full mast and South Carolina flag at half-mast.");
+});
+
+test("preview title states the most useful mast status", () => {
+  const jurisdiction = jurisdictionBySlug("south-carolina");
+  assert.equal(previewTitle(jurisdiction, "full_mast", "half_mast"), "South Carolina flag at half-mast");
+  assert.equal(previewTitle(jurisdiction, "half_mast", "half_mast"), "U.S. and South Carolina flags at half-mast");
+  assert.equal(previewTitle(jurisdiction, "full_mast", "full_mast"), "South Carolina flag at full mast");
+  assert.equal(previewTitle(jurisdiction, "full_mast", "uncertain"), "South Carolina flag status needs review");
 });

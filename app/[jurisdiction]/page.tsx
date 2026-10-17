@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Home from "../page.tsx";
 import { jurisdictionBySlug } from "../../lib/jurisdictions.ts";
 import { getRuntimeDb } from "../../lib/runtime-db.ts";
-import { previewAltText, previewForJurisdiction, validShareToken } from "../../lib/social-preview.ts";
+import { previewAltText, previewForJurisdiction, previewTitle, validShareToken } from "../../lib/social-preview.ts";
 import { siteOrigin } from "../../lib/site-url.ts";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const socialUrl = share ? `${cleanUrl}?share=${encodeURIComponent(share)}` : cleanUrl;
   const imageUrl = `${origin}/api/share-image/${jurisdiction.slug}.png${share ? `?share=${encodeURIComponent(share)}` : ""}`;
   const alt = previewAltText(jurisdiction, preview.usStatus, preview.stateStatus);
-  const title = `Are Flags Lowered? — ${jurisdiction.name}`;
+  const title = previewTitle(jurisdiction, preview.usStatus, preview.stateStatus);
   const description = `Current U.S. and ${jurisdiction.name} flag status.`;
   return {
     title,
