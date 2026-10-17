@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const { jurisdictionByCode, jurisdictionBySlug, jurisdictionCatalog, reservedJurisdictionSlugs } = await import("../lib/jurisdictions.ts");
-const { createShareToken, previewAltText, previewTitle, validShareToken } = await import("../lib/share-preview-core.ts");
+const { createShareToken, previewAltText, previewImageUrl, previewTitle, validShareToken } = await import("../lib/share-preview-core.ts");
 const { previewFlagPresentation, previewGeometry } = await import("../lib/preview-image.ts");
 
 test("every jurisdiction has a unique canonical slug and flag asset", () => {
@@ -48,4 +48,11 @@ test("preview title states the most useful mast status", () => {
   assert.equal(previewTitle(jurisdiction, "half_mast", "half_mast"), "U.S. and South Carolina flags at half-mast");
   assert.equal(previewTitle(jurisdiction, "full_mast", "full_mast"), "South Carolina flag at full mast");
   assert.equal(previewTitle(jurisdiction, "full_mast", "uncertain"), "South Carolina flag status needs review");
+});
+
+test("preview image URLs are cache-versioned for clean and immutable snapshot pages", () => {
+  const origin = "https://flags.example";
+  const token = "Zk4p8N2q7Rw3Vt6Bx9LmQa";
+  assert.equal(previewImageUrl(origin, "colorado"), `${origin}/api/share-image/colorado.png?v=2`);
+  assert.equal(previewImageUrl(origin, "colorado", token), `${origin}/api/share-image/colorado.png?v=2&share=${token}`);
 });

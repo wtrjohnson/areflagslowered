@@ -53,7 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ asse
       background: "#f8f8f6",
     },
   },
-  flagGroup(`${origin}/flags/us.svg`, preview.usStatus),
+  flagGroup(`${origin}/flags/us-preview.svg`, preview.usStatus),
   flagGroup(`${origin}${jurisdiction.flagAsset}`, preview.stateStatus));
   return new ImageResponse(image, {
     width: previewGeometry.width,

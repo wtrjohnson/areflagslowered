@@ -62,10 +62,13 @@ function formatXDates(start: string, end?: string) {
  */
 export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().toISOString(), shareToken?: string): SocialDraft {
   const isCorrection = order.alertType === "correction" || order.alertType === "revision";
-  const intro = isCorrection
+  const isCancellation = order.alertType === "cancellation";
+  const intro = isCancellation
+    ? `CANCELLED — ${order.jurisdiction.name} half-mast order:`
+    : isCorrection
     ? `CORRECTION to ${order.jurisdiction.name} half-mast order:`
     : `${order.jurisdiction.name} half-mast order:`;
-  const dates = isCorrection ? undefined : formatXDates(order.effectiveStart, order.effectiveEnd);
+  const dates = isCorrection || isCancellation ? undefined : formatXDates(order.effectiveStart, order.effectiveEnd);
   const publicUrl = jurisdictionUrl(order, shareToken);
   const fixedText = [intro, dates, "", X_STATUS_LINK_CTA, publicUrl].filter((value) => value !== undefined).join("\n");
   const availableForBody = Math.max(0, X_POST_MAX_LENGTH - Array.from(fixedText).length - 1);
@@ -75,7 +78,7 @@ export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().to
     orderId: order.id,
     status: "draft",
     createdAt,
-    text: isCorrection
+    text: isCorrection || isCancellation
       ? `${intro} ${reason}\n\n${X_STATUS_LINK_CTA}\n${publicUrl}`
       : `${intro} ${reason}\n${dates}\n\n${X_STATUS_LINK_CTA}\n${publicUrl}`,
   };

@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { getDb } from "../../../../../db/index.ts";
 import { retryXPost } from "../../../../../lib/x-publishing.ts";
-
-async function operatorAuthorized() {
-  const email = (await headers()).get("oai-authenticated-user-email");
-  const allowed = (process.env.AFE_OPERATOR_EMAILS || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
-  return Boolean(email && allowed.includes(email.toLowerCase()));
-}
+import { getOperatorEmail } from "../../../../../lib/operator-auth.ts";
 
 export async function POST(request: Request) {
-  if (!(await operatorAuthorized())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await getOperatorEmail())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const payload = request.headers.get("content-type")?.includes("application/json")
     ? await request.json() as { id?: string }
     : { id: String((await request.formData()).get("id") || "") };
@@ -23,7 +17,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  if (!(await operatorAuthorized())) return new NextResponse("Unauthorized", { status: 401 });
+  if (!(await getOperatorEmail())) return new NextResponse("Unauthorized", { status: 401 });
   const id = new URL(request.url).searchParams.get("id");
   if (!id?.startsWith("x-")) return new NextResponse("A valid X draft ID is required.", { status: 400 });
   return new NextResponse(`<!doctype html><title>Retry X post</title><main><h1>Retry X post</h1><p>This will make one new post from the saved alert draft.</p><form method="post"><input type="hidden" name="id" value="${id.replace(/"/g, "&quot;")}"><button type="submit">Retry post</button></form></main>`, { headers: { "content-type": "text/html; charset=utf-8" } });

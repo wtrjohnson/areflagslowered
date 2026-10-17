@@ -34,6 +34,12 @@ test("X draft clearly identifies a correction", () => {
   assert.equal(draft.text, "CORRECTION to Colorado half-mast order: In memory of a public servant whose contribution to the community will be remembered.\n\nSee current flag status and official source details:\nhttps://are-flags-lowered.kvex.chatgpt.site/colorado?share=Zk4p8N2q7Rw3Vt6Bx9LmQa");
 });
 
+test("X draft clearly identifies a cancellation", () => {
+  const draft = createXPostDraft({ ...order, alertType: "cancellation", status: "rejected", reason: "The prior order has been cancelled." }, undefined, "Zk4p8N2q7Rw3Vt6Bx9LmQa");
+  assert.match(draft.text, /^CANCELLED — Colorado half-mast order: The prior order has been cancelled\./);
+  assert.doesNotMatch(draft.text, /October, 16/);
+});
+
 test("X draft uses a compact month-and-day range", () => {
   const draft = createXPostDraft({ ...order, effectiveEnd: "2026-10-18" });
   assert.match(draft.text, /\nOctober, 16–18\n/);

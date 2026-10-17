@@ -8,6 +8,12 @@ export function validShareToken(value: string) {
   return SHARE_TOKEN_PATTERN.test(value);
 }
 
+export function previewImageUrl(origin: string, jurisdictionSlug: string, share?: string) {
+  const params = new URLSearchParams({ v: "2" });
+  if (share) params.set("share", share);
+  return `${origin}/api/share-image/${jurisdictionSlug}.png?${params}`;
+}
+
 export function createShareToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   let binary = "";

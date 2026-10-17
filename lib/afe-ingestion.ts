@@ -1,6 +1,6 @@
 import { and, eq, or } from "drizzle-orm";
 import { getDb } from "../db/index.ts";
-import { inboundEmails, orders, sources, sourceSnapshots } from "../db/schema.ts";
+import { inboundEmails, inboundReviewEvents, orders, sources, sourceSnapshots } from "../db/schema.ts";
 import { upsertJurisdiction, upsertOrder, upsertSource } from "../db/orders.ts";
 import { jurisdictionCatalog, federalJurisdiction } from "./jurisdictions.ts";
 import { emailText, hashText, parseInboundEmail, type InboundEmail } from "./afe-email.ts";
@@ -98,6 +98,9 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
   await db.insert(inboundEmails).values({ id, providerMessageId: options.providerMessageId || email.messageId || null, contentHash: email.contentHash, sender: email.sender, recipient: email.recipient, subject: email.subject, receivedAt: options.receivedAt || new Date(), rawEmail, processingStatus: "received" });
   try {
     const extraction = await extractAfeEmail(email, options.apiKey, options.model);
+    // Keep the model output even when validation or summarization fails so an
+    // operator can inspect and revise the candidate from the original email.
+    await db.update(inboundEmails).set({ extractedJson: extraction }).where(eq(inboundEmails.id, id));
     validateAfeExtraction(extraction);
     const reasonSummary = await summarizeAfeReason(extraction.reason, extraction.namedEntities, options.apiKey, options.model);
     const snapshotId = `afe-snapshot-${email.contentHash.slice(0, 24)}`;
@@ -145,7 +148,7 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
   }
 }
 
-export async function approveAfeInboundEmail(id: string, canonicalOrderId?: string) {
+async function publishAfeInboundEmail(id: string, canonicalOrderId?: string) {
   const db = getDb();
   const row = (await db.select().from(inboundEmails).where(eq(inboundEmails.id, id)))[0];
   if (!row?.extractedJson) throw new Error("No extracted candidate is available for this inbound email.");
@@ -171,9 +174,23 @@ export async function approveAfeInboundEmail(id: string, canonicalOrderId?: stri
       throw new Error("The selected canonical order does not match this alert's jurisdiction, scope, and affected flags.");
     }
     if (extraction.alertType === "cancellation") {
-      await db.update(orders).set({ status: "rejected", updatedAt: new Date() }).where(eq(orders.id, matched.id));
+      const cancelledOrder = {
+        id: matched.id, title: extraction.title || matched.title, reason: reasonSummary,
+        issuingAuthority: extraction.issuingAuthority, jurisdiction, flagTypes: extraction.flagTypes,
+        scope: expectedScope as "nationwide" | "statewide", instructionType: "order" as const,
+        instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart || matched.effectiveStart,
+        effectiveStartTime: extraction.effectiveStartTime || matched.effectiveStartTime || undefined,
+        effectiveEnd: extraction.effectiveEnd || matched.effectiveEnd || undefined,
+        effectiveEndTime: extraction.effectiveEndTime || matched.effectiveEndTime || undefined,
+        effectiveEndCondition: extraction.effectiveEndCondition || matched.effectiveEndCondition || undefined,
+        timeZone: extraction.timeZone || matched.timeZone || undefined, sourceUrl: AFE_SOURCE_URL,
+        sourceSnapshotId: snapshotId, status: "rejected" as const, createdAt: matched.createdAt.toISOString(),
+        alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId,
+      };
+      await upsertOrder(db, cancelledOrder);
+      const xPost = await queueAndPublishXPost(db, cancelledOrder);
       await db.update(inboundEmails).set({ processingStatus: "cancelled", orderId: matched.id, error: null }).where(eq(inboundEmails.id, id));
-      return { status: "cancelled", id, orderId: matched.id };
+      return { status: "cancelled", id, orderId: matched.id, xPost: xPost.status };
     }
     if (!extraction.effectiveStart) throw new Error("An approved correction or revision requires an effective start date.");
     const correctedOrder = {
@@ -209,6 +226,91 @@ export async function approveAfeInboundEmail(id: string, canonicalOrderId?: stri
   const xPost = await queueAndPublishXPost(db, newOrder);
   await db.update(inboundEmails).set({ processingStatus: "published", orderId: idForOrder, error: null }).where(eq(inboundEmails.id, id));
   return { status: "published", id, orderId: idForOrder, xPost: xPost.status };
+}
+
+async function reviewEvent(db: ReturnType<typeof getDb>, values: {
+  inboundEmailId: string;
+  eventType: string;
+  operatorEmail?: string;
+  note?: string;
+  candidateSnapshot?: unknown;
+  error?: string;
+}) {
+  await db.insert(inboundReviewEvents).values({
+    id: `review-${crypto.randomUUID()}`,
+    inboundEmailId: values.inboundEmailId,
+    eventType: values.eventType,
+    operatorEmail: values.operatorEmail,
+    note: values.note,
+    candidateSnapshot: values.candidateSnapshot,
+    error: values.error,
+  });
+}
+
+export async function approveAfeInboundEmail(id: string, canonicalOrderId: string | undefined, operatorEmail = "system", note?: string) {
+  const db = getDb();
+  const claimed = await db.update(inboundEmails)
+    .set({ processingStatus: "approving" })
+    .where(and(eq(inboundEmails.id, id), eq(inboundEmails.processingStatus, "quarantined")))
+    .returning({ candidate: inboundEmails.extractedJson });
+  if (!claimed[0]) throw new Error("This review item is no longer unresolved.");
+  try {
+    const result = await publishAfeInboundEmail(id, canonicalOrderId);
+    await reviewEvent(db, { inboundEmailId: id, eventType: "approved", operatorEmail, note: note?.trim(), candidateSnapshot: claimed[0].candidate });
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await db.update(inboundEmails).set({ processingStatus: "quarantined", error: message })
+      .where(and(eq(inboundEmails.id, id), eq(inboundEmails.processingStatus, "approving")));
+    await reviewEvent(db, { inboundEmailId: id, eventType: "approval_failed", operatorEmail, note: note?.trim(), candidateSnapshot: claimed[0].candidate, error: message });
+    throw error;
+  }
+}
+
+export async function requestAfeRevision(id: string, note: string, operatorEmail: string, options: { apiKey?: string; model?: string } = {}) {
+  const feedback = note.trim();
+  if (!feedback) throw new Error("Operator feedback is required.");
+  const db = getDb();
+  const claimed = await db.update(inboundEmails)
+    .set({ processingStatus: "reprocessing" })
+    .where(and(eq(inboundEmails.id, id), eq(inboundEmails.processingStatus, "quarantined")))
+    .returning({ rawEmail: inboundEmails.rawEmail, priorCandidate: inboundEmails.extractedJson, validationError: inboundEmails.error });
+  if (!claimed[0]) throw new Error("This review item is no longer unresolved.");
+  await reviewEvent(db, { inboundEmailId: id, eventType: "revision_requested", operatorEmail, note: feedback, candidateSnapshot: claimed[0].priorCandidate });
+  try {
+    const email = parseInboundEmail(claimed[0].rawEmail);
+    const extraction = await extractAfeEmail(email, options.apiKey, options.model, {
+      priorCandidate: claimed[0].priorCandidate,
+      validationError: claimed[0].validationError,
+      operatorNote: feedback,
+    });
+    validateAfeExtraction(extraction);
+    const reasonSummary = await summarizeAfeReason(extraction.reason, extraction.namedEntities, options.apiKey, options.model);
+    const candidate = { ...extraction, reasonSummary };
+    await db.update(inboundEmails).set({ extractedJson: candidate, processingStatus: "quarantined", error: null })
+      .where(and(eq(inboundEmails.id, id), eq(inboundEmails.processingStatus, "reprocessing")));
+    await reviewEvent(db, { inboundEmailId: id, eventType: "revision_completed", operatorEmail, note: feedback, candidateSnapshot: candidate });
+    return { status: "quarantined", id, candidate };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await db.update(inboundEmails).set({ processingStatus: "quarantined", error: `Revision failed: ${message}` })
+      .where(and(eq(inboundEmails.id, id), eq(inboundEmails.processingStatus, "reprocessing")));
+    await reviewEvent(db, { inboundEmailId: id, eventType: "revision_failed", operatorEmail, note: feedback, candidateSnapshot: claimed[0].priorCandidate, error: message });
+    throw error;
+  }
+}
+
+export async function dismissAfeInboundEmail(id: string, reason: string, operatorEmail: string) {
+  const note = reason.trim();
+  if (!note) throw new Error("A dismissal reason is required.");
+  const db = getDb();
+  const dismissed = await db.update(inboundEmails)
+    .set({ processingStatus: "rejected", error: note })
+    .where(and(eq(inboundEmails.id, id), eq(inboundEmails.processingStatus, "quarantined")))
+    .returning({ candidate: inboundEmails.extractedJson });
+  if (!dismissed[0]) throw new Error("This review item is no longer unresolved.");
+  await reviewEvent(db, { inboundEmailId: id, eventType: "dismissed", operatorEmail, note, candidateSnapshot: dismissed[0].candidate });
+  return { status: "rejected", id };
 }
 
 export { AFE_SOURCE_ID, AFE_SOURCE_URL, AFE_TRUSTED_FORWARDERS };

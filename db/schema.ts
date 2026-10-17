@@ -126,6 +126,19 @@ export const inboundEmails = pgTable("inbound_emails", {
   contentHashIdx: uniqueIndex("inbound_emails_content_hash_idx").on(table.contentHash),
 }));
 
+export const inboundReviewEvents = pgTable("inbound_review_events", {
+  id: text("id").primaryKey(),
+  inboundEmailId: text("inbound_email_id").notNull().references(() => inboundEmails.id),
+  eventType: text("event_type").notNull(),
+  operatorEmail: text("operator_email"),
+  note: text("note"),
+  candidateSnapshot: jsonb("candidate_snapshot"),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  inboundCreatedIdx: index("inbound_review_events_inbound_created_idx").on(table.inboundEmailId, table.createdAt),
+}));
+
 export const currentStatus = pgTable("current_status", {
   id: text("id").primaryKey(),
   jurisdictionId: text("jurisdiction_id").notNull().references(() => jurisdictions.id),

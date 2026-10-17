@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { extractAfeEmail, summarizeAfeReason, validateAfeExtraction } from "../../../../lib/afe-extractor.ts";
 import { parseInboundEmail } from "../../../../lib/afe-email.ts";
 import { validateAfeSender } from "../../../../lib/afe-ingestion.ts";
 import { createTestAlertResult, scenarioFromExtraction, type TestAlertScenario } from "../../../../lib/test-alert.ts";
 import { publishTestXPost } from "../../../../lib/test-x-publishing.ts";
 import { getDb } from "../../../../db/index.ts";
-
-async function operatorAuthorized() {
-  const email = (await headers()).get("oai-authenticated-user-email");
-  const allowed = (process.env.AFE_OPERATOR_EMAILS || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
-  return Boolean(email && allowed.includes(email.toLowerCase()));
-}
+import { getOperatorEmail } from "../../../../lib/operator-auth.ts";
 
 export async function POST(request: Request) {
-  if (!(await operatorAuthorized())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await getOperatorEmail())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const payload = await request.json() as { mode?: "scenario" | "email" | "publish_test"; scenario?: TestAlertScenario; rawEmail?: string; requestId?: string };
     if (payload.mode === "publish_test") {

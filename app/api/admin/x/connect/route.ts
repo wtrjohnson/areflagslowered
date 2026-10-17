@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
 import { chatGPTSignInPath, getChatGPTUser } from "../../../../../app/chatgpt-auth.ts";
 import { createXAuthorizationUrl } from "../../../../../lib/x-oauth.ts";
+import { isOperatorEmail } from "../../../../../lib/operator-auth.ts";
 
 export const dynamic = "force-dynamic";
-
-function isOperator(email: string) {
-  return (process.env.AFE_OPERATOR_EMAILS || "")
-    .split(",")
-    .map((value) => value.trim().toLowerCase())
-    .includes(email.toLowerCase());
-}
 
 export async function GET(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.redirect(new URL(chatGPTSignInPath("/api/admin/x/connect"), request.url));
-  if (!isOperator(user.email)) return new NextResponse("Only an approved Are Flags Lowered operator can connect X.", { status: 403 });
+  if (!isOperatorEmail(user.email)) return new NextResponse("Only an approved Are Flags Lowered operator can connect X.", { status: 403 });
 
   const origin = process.env.ARE_FLAGS_LOWERED_URL || new URL(request.url).origin;
   const authorization = await createXAuthorizationUrl(origin);
