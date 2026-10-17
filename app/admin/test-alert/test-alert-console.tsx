@@ -37,13 +37,18 @@ export default function TestAlertConsole() {
   const [result, setResult] = useState<Result>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishResult, setPublishResult] = useState("");
+  const [requestId] = useState(() => crypto.randomUUID().replace(/-/g, ""));
+
+  const scenario = { stateCode, reason, effectiveStart: start, effectiveEnd: end || undefined, alertType, usStatus, stateStatus };
 
   const run = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true); setError(""); setResult(undefined);
     const payload = mode === "email"
       ? { mode, rawEmail }
-      : { mode, scenario: { stateCode, reason, effectiveStart: start, effectiveEnd: end || undefined, alertType, usStatus, stateStatus } };
+      : { mode, scenario };
     try {
       const response = await fetch("/api/admin/test-alert", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json() as Result & { error?: string };
@@ -52,6 +57,17 @@ export default function TestAlertConsole() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Test alert could not be simulated.");
     } finally { setBusy(false); }
+  };
+
+  const publish = async () => {
+    setPublishBusy(true); setError(""); setPublishResult("");
+    try {
+      const response = await fetch("/api/admin/test-alert", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode: "publish_test", scenario, requestId }) });
+      const data = await response.json() as { status?: string; postId?: string; error?: string };
+      if (!response.ok || data.status === "failed") throw new Error(data.error || "The X test post could not be published.");
+      setPublishResult(data.status === "posted" ? `Test post published to X (post ID ${data.postId}).` : "This test request was already handled; no duplicate was created.");
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "The X test post could not be published."); }
+    finally { setPublishBusy(false); }
   };
 
   return <main className="test-console">
@@ -73,6 +89,6 @@ export default function TestAlertConsole() {
       <button className="test-run" disabled={busy}>{busy ? "Simulating…" : "Run dry simulation"}</button>
     </form>
     {error && <p className="test-error" role="alert">{error}</p>}
-    {result && <section className="test-result" aria-live="polite"><div><h2>Flag-card preview</h2><p className="test-result-note">{result.previewAlt}</p></div><div className="test-preview"><Flag src="/flags/us.svg" label="U.S. flag" status={result.usStatus} /><Flag src={result.jurisdiction.flagAsset} label={`${result.jurisdiction.name} flag`} status={result.stateStatus} /></div><div className="test-output"><h2>X copy</h2><pre>{result.socialText}</pre><p><strong>Simulated share URL:</strong> {result.simulatedShareUrl}</p><p className="test-result-note">The simulated token is never saved. A real post gets a different, immutable token when it is published.</p>{result.extraction && <details><summary>Parsed email details</summary><p><strong>Scope:</strong> {result.extraction.geographicScope}<br /><strong>Authority:</strong> {result.extraction.issuingAuthority}<br /><strong>Names:</strong> {result.extraction.namedEntities.join(", ") || "None"}</p></details>}</div><ul>{result.notes.map((note) => <li key={note}>{note}</li>)}</ul></section>}
+    {result && <section className="test-result" aria-live="polite"><div><h2>Flag-card preview</h2><p className="test-result-note">{result.previewAlt}</p></div><div className="test-preview"><Flag src="/flags/us.svg" label="U.S. flag" status={result.usStatus} /><Flag src={result.jurisdiction.flagAsset} label={`${result.jurisdiction.name} flag`} status={result.stateStatus} /></div><div className="test-output"><h2>X copy</h2><pre>{result.socialText}</pre><p><strong>Simulated share URL:</strong> {result.simulatedShareUrl}</p><p className="test-result-note">The simulated token is never saved. A real post gets a different, immutable token when it is published.</p>{result.extraction && <details><summary>Parsed email details</summary><p><strong>Scope:</strong> {result.extraction.geographicScope}<br /><strong>Authority:</strong> {result.extraction.issuingAuthority}<br /><strong>Names:</strong> {result.extraction.namedEntities.join(", ") || "None"}</p></details>}</div><div className="test-publish"><h2>Protected X test</h2><p>This creates one clearly labeled <strong>TEST</strong> post on @areflagslowered with a real immutable link preview. It does not affect live flag status.</p><button type="button" onClick={publish} disabled={publishBusy}>{publishBusy ? "Publishing test…" : "Post protected X test"}</button>{publishResult && <p className="test-success">{publishResult}</p>}</div><ul>{result.notes.map((note) => <li key={note}>{note}</li>)}</ul></section>}
   </main>;
 }

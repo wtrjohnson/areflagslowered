@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const { createTestAlertResult, scenarioFromExtraction } = await import("../lib/test-alert.ts");
+const { createXTestPostDraft } = await import("../lib/social.ts");
 
 test("dry test alerts use a simulated tokenized state URL without persistence", () => {
   const result = createTestAlertResult({
@@ -27,4 +28,15 @@ test("email extraction scenarios preserve independent mast positions", () => {
   });
   assert.equal(scenario.usStatus, "full_mast");
   assert.equal(scenario.stateStatus, "half_mast");
+});
+
+test("X test posts are clearly labelled and retain a real-sized share token", () => {
+  const token = "Zk4p8N2q7Rw3Vt6Bx9LmQa";
+  const draft = createXTestPostDraft({
+    id: "test-order", title: "Test", reason: "In memory of Sandra Bolden Cunningham.", issuingAuthority: "Test console",
+    jurisdiction: { id: "nj", name: "New Jersey", stateCode: "NJ", level: "state" }, flagTypes: ["state"], scope: "statewide", instructionType: "order", instructionText: "Test", effectiveStart: "2026-10-17", sourceUrl: "https://example.com", sourceSnapshotId: "test-snapshot", status: "needs_review", createdAt: "2026-10-17T00:00:00.000Z",
+  }, "2026-10-17T00:00:00.000Z", token);
+  assert.match(draft.text, /^TEST — New Jersey half-mast alert:/);
+  assert.match(draft.text, /\/new-jersey\?share=Zk4p8N2q7Rw3Vt6Bx9LmQa$/);
+  assert.ok(Array.from(draft.text).length <= 280);
 });

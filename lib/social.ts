@@ -79,3 +79,19 @@ export function createXPostDraft(order: HalfMastOrder, createdAt = new Date().to
       : `${intro} ${reason}\n${dates}\n\n${publicUrl}`,
   };
 }
+
+/** A clearly labelled operator test that never represents a live flag order. */
+export function createXTestPostDraft(order: HalfMastOrder, createdAt = new Date().toISOString(), shareToken: string): SocialDraft {
+  const intro = `TEST — ${order.jurisdiction.name} half-mast alert:`;
+  const dates = formatXDates(order.effectiveStart, order.effectiveEnd);
+  const publicUrl = jurisdictionUrl(order, shareToken);
+  const fixedText = [intro, dates, "", publicUrl].join("\n");
+  const reason = truncate(order.reason, Math.max(0, X_POST_MAX_LENGTH - Array.from(fixedText).length - 1));
+  return {
+    id: `x-test-${shareToken}`,
+    orderId: order.id,
+    status: "draft",
+    createdAt,
+    text: `${intro} ${reason}\n${dates}\n\n${publicUrl}`,
+  };
+}

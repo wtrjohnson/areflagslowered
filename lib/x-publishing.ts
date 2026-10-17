@@ -65,6 +65,13 @@ async function publishClaimedDraft(db: Database, id: string, text: string, token
   }
 }
 
+export async function publishXDraft(db: Database, id: string, text: string): Promise<XPublishResult> {
+  if (!xPublishingEnabled()) return { status: "failed", error: "X posting is disabled." };
+  const token = await xAccessToken(db);
+  if (!token) return { status: "failed", error: "X is not connected." };
+  return publishClaimedDraft(db, id, text, token);
+}
+
 /**
  * Saves every eligible public alert before attempting a post. A row may be
  * claimed only once, which makes duplicate webhook deliveries harmless. Failed

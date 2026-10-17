@@ -117,5 +117,10 @@ textarea, select { font: inherit; }
 .test-flag-uncertain { transform: translateY(42px); opacity: .45; }
 .test-output pre { overflow-x: auto; margin: 8px 0; padding: 14px; background: var(--paper); white-space: pre-wrap; font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .test-output p { overflow-wrap: anywhere; }
+.test-publish { border-top: 1px solid var(--line); padding-top: 18px; }
+.test-publish p { color: var(--muted); line-height: 1.45; }
+.test-publish button { border: 1px solid var(--ink); background: var(--blue); color: #fff; padding: 10px 13px; font-weight: 700; cursor: pointer; }
+.test-publish button:disabled { cursor: wait; opacity: .65; }
+.test-success { margin-top: 10px; color: #087329 !important; }
 .test-result ul { display: grid; gap: 5px; margin: 0; padding-left: 19px; color: var(--muted); font-size: 13px; }
 @media (max-width: 680px) { .test-console { padding: 24px 18px 48px; } .test-console-header { align-items: flex-start; flex-direction: column; } .test-fields { grid-template-columns: 1fr; } .test-preview { justify-content: flex-start; gap: 28px; overflow-x: auto; } }
