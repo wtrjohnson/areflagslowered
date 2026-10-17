@@ -179,3 +179,12 @@ export const socialDrafts = pgTable("social_drafts", {
   status: socialDraftStatus("status").notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const xOAuthConnections = pgTable("x_oauth_connections", {
+  id: text("id").primaryKey(),
+  accountHandle: text("account_handle").notNull(),
+  encryptedTokens: text("encrypted_tokens").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

@@ -3,6 +3,7 @@ import { socialDrafts } from "../db/schema.ts";
 import type { getDb } from "../db/index.ts";
 import { notifyInboundIssue } from "./monitoring.ts";
 import { createXPostDraft } from "./social.ts";
+import { getXAccessToken } from "./x-oauth.ts";
 import type { HalfMastOrder } from "./types.ts";
 
 type Database = ReturnType<typeof getDb>;
@@ -11,16 +12,14 @@ type XPublishStatus = "posted" | "queued" | "already_handled" | "failed";
 export type XPublishResult = { status: XPublishStatus; postId?: string };
 
 function xPublishingEnabled() {
-  return process.env.X_POSTING_ENABLED === "true" && Boolean(process.env.X_USER_ACCESS_TOKEN);
+  return process.env.X_POSTING_ENABLED === "true";
 }
 
 function errorMessage(value: unknown) {
   return value instanceof Error ? value.message : String(value);
 }
 
-async function createXPost(text: string) {
-  const token = process.env.X_USER_ACCESS_TOKEN;
-  if (!token) throw new Error("X_USER_ACCESS_TOKEN is not configured.");
+async function createXPost(token: string, text: string) {
   const response = await fetch("https://api.x.com/2/tweets", {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -51,6 +50,15 @@ export async function queueAndPublishXPost(db: Database, order: HalfMastOrder): 
 
   if (!xPublishingEnabled()) return { status: "queued" };
 
+  let token: string | undefined;
+  try {
+    token = await getXAccessToken(db);
+  } catch (error) {
+    await notifyInboundIssue("X authorization needs attention", errorMessage(error));
+    return { status: "queued" };
+  }
+  if (!token) return { status: "queued" };
+
   const claimed = await db.update(socialDrafts)
     .set({ status: "approved" })
     .where(and(eq(socialDrafts.id, draft.id), eq(socialDrafts.status, "draft")))
@@ -58,7 +66,7 @@ export async function queueAndPublishXPost(db: Database, order: HalfMastOrder): 
   if (!claimed[0]) return { status: "already_handled" };
 
   try {
-    const postId = await createXPost(claimed[0].text);
+    const postId = await createXPost(token, claimed[0].text);
     await db.update(socialDrafts).set({ status: "published" }).where(eq(socialDrafts.id, draft.id));
     return { status: "posted", postId };
   } catch (error) {
