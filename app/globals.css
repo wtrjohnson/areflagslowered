@@ -38,13 +38,13 @@ button, input { font: inherit; }
 .flag-display { width: 278px; min-width: 0; }
 .flag-stage { position: relative; height: 270px; }
 .flag-pole { position: absolute; left: 0; top: 0; bottom: 0; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
-.flag-cloth { position: absolute; left: 8px; top: 0; width: 270px; aspect-ratio: 559 / 350; overflow: hidden; background: transparent; box-shadow: none; transform: translateY(var(--mast-offset, 0)); transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease; will-change: transform; }
+.flag-cloth { --flag-y: 0px; position: absolute; left: 8px; top: 0; width: 270px; aspect-ratio: 559 / 350; overflow: hidden; background: transparent; box-shadow: none; transform: translateY(var(--flag-y)); transition: transform 250ms ease-out, opacity 220ms ease; will-change: transform; }
 .flag-cloth span { display: none; }
 .flag-art { position: absolute; z-index: 2; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; object-position: left top; }
 .flag-art[hidden] { display: none; }
 .flag-cloth[data-asset-missing="true"]::after { content: "Flag unavailable"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.flag-half_mast .flag-cloth { top: 50%; transform: translateY(-50%); }
-.flag-uncertain .flag-cloth { --mast-offset: 42px; opacity: .45; }
+.flag-half_mast .flag-cloth { --flag-y: calc(135px - 50%); }
+.flag-uncertain .flag-cloth { --flag-y: 42px; opacity: .45; }
 .flag-uncertain .flag-cloth::after { display: none; }
 .flag-name { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.035em; }
 .flag-status { margin: 0; color: var(--muted); font-size: 15px; transition: filter 220ms ease, opacity 220ms ease; }
@@ -74,8 +74,8 @@ button, input { font: inherit; }
   .flag-stage { height: 225px; }
   .flag-pole { left: 8px; top: 0; bottom: 0; width: 6px; }
   .flag-cloth { left: 14px; top: 0; width: min(78%, 210px); }
-  .flag-half_mast .flag-cloth { top: 50%; transform: translateY(-50%); }
-  .flag-uncertain .flag-cloth { --mast-offset: 38px; }
+  .flag-half_mast .flag-cloth { --flag-y: calc(112.5px - 50%); }
+  .flag-uncertain .flag-cloth { --flag-y: 38px; }
   .status-copy { margin-top: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
