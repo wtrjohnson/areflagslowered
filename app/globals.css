@@ -6,11 +6,8 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: Aria
 button, input { font: inherit; }
 textarea, select { font: inherit; }
 .status-page { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 20px 48px 32px; }
-.masthead { display: flex; justify-content: center; align-items: center; gap: 14px; }
-.site-brand { display: inline-flex; align-items: center; gap: 11px; }
-.site-brand-mark { display: block; width: clamp(38px, 4vw, 48px); height: auto; flex: 0 0 auto; }
-.site-brand-text { font-size: clamp(20px, 2.4vw, 30px); font-weight: 700; letter-spacing: -.055em; line-height: .92; text-transform: uppercase; }
-.brand-answer { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 400; letter-spacing: -.07em; }
+.masthead { display: flex; justify-content: center; align-items: baseline; gap: 12px; }
+.brand, .brand-answer { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 400; letter-spacing: -.07em; }
 .brand-answer { color: var(--accent); letter-spacing: -.06em; transition: filter 220ms ease, opacity 220ms ease; }
 .status-full_mast .brand-answer { color: var(--blue); }
 .status-uncertain .brand-answer { color: var(--warning); }
@@ -70,10 +67,6 @@ textarea, select { font: inherit; }
 @keyframes status-reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 760px) {
   .status-page { padding: 24px 20px 28px; }
-  .masthead { gap: 9px; }
-  .site-brand { gap: 7px; }
-  .site-brand-mark { width: 34px; }
-  .site-brand-text { max-width: 112px; font-size: 17px; }
   .hero { margin-top: 50px; }
   .location-context { gap: 7px; font-size: clamp(21px, 7vw, 29px); }
   .state-menu { left: auto; right: 0; transform: none; }

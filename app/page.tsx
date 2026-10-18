@@ -181,10 +181,7 @@ export default function Home({ initialStateCode = "VA" }: { initialStateCode?: s
   return (
     <main className={`status-page status-${answer.status} ${refreshingState ? "is-refreshing" : ""}`}>
       <header className="masthead">
-        <div className="site-brand" aria-label="Are Flags Lowered?">
-          <img className="site-brand-mark" src="/logo-mark.svg" alt="" width="48" height="48" />
-          <span className="site-brand-text">Are Flags Lowered?</span>
-        </div>
+        <p className="brand">AreFlagsLowered?</p>
         <p className="brand-answer" aria-live="polite">{statusWord(answer.status)}</p>
       </header>
 
