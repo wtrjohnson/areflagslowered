@@ -99,10 +99,19 @@ export default function AdminConsole({ initialData, operatorEmail }: { initialDa
     {message && <p className="ops-message" role="status">{message}</p>}
 
     <div className="ops-grid">
-      <section className="ops-panel"><h2>NEEDS REVIEW <b className="amber">{data.queue.length}</b></h2>
+      <section className="ops-panel"><h2>INBOUND REVIEW <b className="amber">{data.queue.length}</b></h2>
         <div className="ops-list">{data.queue.length ? data.queue.map((row) => <button key={row.id} className={row.id === selected?.id ? "selected" : ""} onClick={() => { setSelectedId(row.id); setNote(""); setCanonicalOrderId(""); }}>
           <strong>{row.subject || "(no subject)"}</strong><span>{when(row.receivedAt)}</span><em className="red">{row.error || "candidate awaiting review"}</em>
         </button>) : <p className="green">QUEUE CLEAR</p>}</div>
+      </section>
+
+      <section className="ops-panel"><h2>STATUS COVERAGE REVIEW <b className="amber">{data.statusReview.length}</b></h2>
+        <div className="ops-list static">{data.statusReview.length ? data.statusReview.map((row) => <div key={row.id}>
+          <strong>{row.jurisdiction.name} · {row.flagType === "us" ? "U.S. flag" : "State flag"}</strong>
+          <span>{when(row.checkedAt)} · {row.sourceName || row.sourceId || "NO SOURCE"}</span>
+          <em className="amber">{row.reason}</em>
+          {row.sourceUrl && <a className="status-source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">[OPEN SOURCE ↗]</a>}
+        </div>) : <p className="green">COVERAGE CLEAR</p>}</div>
       </section>
 
       <section className="ops-panel"><h2>ACTIVE ORDERS <b className="green">{data.activeOrders.length}</b></h2>

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import type { getDb } from "../db/index.ts";
 import { currentStatus, inboundEmails, inboundReviewEvents, jurisdictions, orders, sourceSnapshots, sources } from "../db/schema.ts";
 import { inboundHealth } from "./inbound-health.ts";
@@ -12,7 +12,7 @@ const iso = (value: Date | null) => value?.toISOString() || null;
 
 export async function adminDashboardData(db: Database, now = new Date()) {
   const today = now.toISOString().slice(0, 10);
-  const [queue, active, health, xDelivery, candidateRows, mastRows, auditRows] = await Promise.all([
+  const [queue, active, health, xDelivery, candidateRows, mastRows, statusReviewRows, auditRows] = await Promise.all([
     db.select().from(inboundEmails).where(eq(inboundEmails.processingStatus, "quarantined")).orderBy(desc(inboundEmails.receivedAt)),
     db.select({ order: orders, jurisdiction: jurisdictions }).from(orders)
       .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
@@ -31,6 +31,15 @@ export async function adminDashboardData(db: Database, now = new Date()) {
       .where(and(eq(orders.status, "published"), eq(sources.id, AFE_SOURCE_ID)))
       .orderBy(desc(orders.updatedAt)),
     db.select().from(currentStatus),
+    db.select({ status: currentStatus, jurisdiction: jurisdictions, sourceName: sources.name })
+      .from(currentStatus)
+      .innerJoin(jurisdictions, eq(currentStatus.jurisdictionId, jurisdictions.id))
+      .leftJoin(sources, eq(currentStatus.sourceId, sources.id))
+      .where(and(
+        ne(jurisdictions.level, "federal"),
+        or(eq(currentStatus.status, "uncertain"), eq(currentStatus.confidence, "review")),
+      ))
+      .orderBy(asc(jurisdictions.name), asc(currentStatus.flagType)),
     db.select().from(inboundReviewEvents).orderBy(desc(inboundReviewEvents.createdAt)).limit(200),
   ]);
   const mastByJurisdiction = new Map<string, Record<string, string>>();
@@ -60,6 +69,20 @@ export async function adminDashboardData(db: Database, now = new Date()) {
       updatedAt: order.updatedAt.toISOString(),
       jurisdiction,
       mastStatus: mastByJurisdiction.get(jurisdiction.id) || {},
+    })),
+    statusReview: statusReviewRows.map(({ status, jurisdiction, sourceName }) => ({
+      id: status.id,
+      jurisdiction,
+      flagType: status.flagType,
+      status: status.status,
+      confidence: status.confidence,
+      sourceId: status.sourceId,
+      sourceName,
+      sourceUrl: status.sourceUrl,
+      checkedAt: status.checkedAt.toISOString(),
+      reason: status.sourceId
+        ? `The latest ${status.flagType === "us" ? "U.S." : "state"} flag result could not be verified.`
+        : `No verified live ${status.flagType === "us" ? "U.S." : "state"} flag source is connected for this jurisdiction.`,
     })),
     health,
     xDelivery: {
