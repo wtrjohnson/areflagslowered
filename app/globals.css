@@ -12,21 +12,29 @@ textarea, select { font: inherit; }
 .status-full_mast .brand-answer { color: var(--blue); }
 .status-uncertain .brand-answer { color: var(--warning); }
 .hero { max-width: 930px; margin: 34px auto 0; }
-.location-context { display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 48px; font-size: clamp(24px, 3vw, 35px); font-weight: 400; letter-spacing: -.065em; }
+.location-context { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 11px; min-height: 48px; font-size: clamp(24px, 3vw, 35px); font-weight: 400; letter-spacing: -.065em; }
 .location-divider { color: var(--muted); }
 .state-picker { position: relative; }
 .state-trigger { display: inline-flex; align-items: center; gap: 8px; border: 0; border-bottom: 1px solid transparent; padding: 0 0 2px; background: transparent; color: var(--ink); cursor: pointer; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
 .state-trigger:hover { border-bottom-color: var(--ink); }
-.state-trigger:focus-visible, .state-search:focus-visible { outline: 2px solid var(--blue); outline-offset: 5px; }
+.state-trigger:focus-visible, .state-search:focus-visible, .state-filter-tab:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 .chevron { margin-top: -5px; font-size: .9em; font-weight: 300; transition: transform 180ms ease; }
 .state-trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
 .state-menu { position: absolute; z-index: 10; top: calc(100% + 14px); left: 50%; width: min(360px, calc(100vw - 40px)); transform: translateX(-50%); border: 1px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 rgba(17,17,17,.1); padding: 10px; }
 .state-search { width: 100%; border: 1px solid var(--line); border-radius: 0; padding: 10px 12px; background: #fff; color: var(--ink); font-size: 15px; }
+.state-filter-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 8px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.state-filter-tab { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; border: 1px solid transparent; padding: 7px 6px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; white-space: nowrap; }
+.state-filter-tab span { color: inherit; font-size: 10px; font-variant-numeric: tabular-nums; }
+.state-filter-tab:hover:not(:disabled) { border-color: var(--line); color: var(--ink); }
+.state-filter-tab[aria-selected="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.state-filter-tab:disabled { cursor: wait; opacity: .45; }
 .state-options { max-height: 276px; margin-top: 8px; overflow-y: auto; }
 .state-option { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; padding: 10px 8px; background: transparent; color: var(--ink); cursor: pointer; font-size: 16px; text-align: left; }
+.state-option-name { display: inline-flex; min-width: 0; align-items: center; gap: 7px; }
+.selected-check { color: var(--blue); font-size: 13px; }
 .state-option small { color: var(--muted); font-size: 11px; letter-spacing: .08em; }
 .state-option-meta { display: flex; align-items: center; gap: 12px; }
-.state-menu-status { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; letter-spacing: .02em; white-space: nowrap; }
+.state-menu-status { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; letter-spacing: .01em; white-space: nowrap; }
 .state-menu-status i { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
 .state-menu-half_mast { color: var(--accent); }
 .state-menu-half_mast i { background: var(--accent); }
@@ -37,6 +45,8 @@ textarea, select { font: inherit; }
 .no-state-match { margin: 0; padding: 18px 8px; color: var(--muted); font-size: 14px; }
 .flags { display: grid; grid-template-columns: repeat(2, 278px); gap: 120px; width: 676px; margin: 8px auto 0; }
 .flag-display { width: 278px; min-width: 0; }
+.state-empty { display: grid; width: 278px; height: 270px; place-items: center; border: 1px dashed var(--line); padding: 30px; text-align: center; }
+.state-empty p { max-width: 190px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
 .flag-stage { position: relative; height: 270px; }
 .flag-pole { position: absolute; left: 0; top: 0; bottom: 0; width: 8px; border-radius: 7px 7px 0 0; background: var(--ink); }
 .flag-cloth { --flag-y: 0px; position: absolute; left: 8px; top: 0; width: 270px; aspect-ratio: 559 / 350; overflow: hidden; background: transparent; box-shadow: none; transform: translateY(var(--flag-y)); transition: transform 250ms ease-out, opacity 220ms ease; will-change: transform; }
@@ -53,6 +63,7 @@ textarea, select { font: inherit; }
 .status-full_mast .flag-full_mast .flag-status { color: var(--blue); }
 .flag-uncertain .flag-status { color: var(--warning); }
 .status-page.is-refreshing .brand-answer, .status-page.is-refreshing .flag-status { filter: blur(3px); opacity: .5; }
+.status-page.is-refreshing .flag-cloth { opacity: .35; }
 .status-copy { min-height: 88px; margin-top: 16px; text-align: center; animation: status-reveal 260ms ease both; }
 .status-copy.is-loading { display: grid; place-items: center; }
 .status-loading { margin: 0; color: var(--muted); font-size: 15px; }
@@ -68,10 +79,13 @@ textarea, select { font: inherit; }
 @media (max-width: 760px) {
   .status-page { padding: 24px 20px 28px; }
   .hero { margin-top: 50px; }
-  .location-context { gap: 7px; font-size: clamp(21px, 7vw, 29px); }
-  .state-menu { left: auto; right: 0; transform: none; }
+  .location-context { gap: 7px; row-gap: 4px; font-size: clamp(21px, 7vw, 29px); }
+  .state-trigger { max-width: calc(100vw - 40px); }
+  .state-menu { position: fixed; top: 132px; right: 16px; left: 16px; width: auto; max-height: calc(100dvh - 148px); transform: none; box-shadow: 6px 6px 0 rgba(17,17,17,.1); }
+  .state-options { max-height: calc(100dvh - 274px); }
   .flags { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; width: 100%; }
   .flag-display { width: auto; }
+  .state-empty { width: auto; height: 225px; padding: 18px; }
   .flag-stage { height: 225px; }
   .flag-pole { left: 8px; top: 0; bottom: 0; width: 6px; }
   .flag-cloth { left: 14px; top: 0; width: min(78%, 210px); }
