@@ -1,4 +1,4 @@
-CREATE TABLE "x_oauth_connections" (
+CREATE TABLE IF NOT EXISTS "x_oauth_connections" (
   "id" text PRIMARY KEY NOT NULL,
   "account_handle" text NOT NULL,
   "encrypted_tokens" text NOT NULL,
