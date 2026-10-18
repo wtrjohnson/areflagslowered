@@ -124,8 +124,8 @@ The primary endpoint is `GET /api/status`:
 Use `all=true` for a single text response containing every current federal,
 state, and territorial U.S.-flag and state-flag status.
 
-Use `/api/coverage` for source-health reporting: freshness, failures, latency,
-current-status counts, and open conflicts.
+Use `/api/coverage` for American Flags Express inbound-email health reporting:
+recent processing counts, quarantined messages, and active orders with no end date.
 
 Without Neon, use the local Dolly fixture to exercise an active order:
 

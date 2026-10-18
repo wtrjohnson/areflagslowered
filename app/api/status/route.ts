@@ -73,7 +73,6 @@ export async function GET(request: Request) {
     }
   }
   let orderRecords: Awaited<ReturnType<typeof listActiveOrders>>;
-  let persistedStatuses;
   if (process.env.NODE_ENV === "development" && demo && demoOrders[demo]) {
     orderRecords = demoOrders[demo];
   } else {
@@ -87,7 +86,6 @@ export async function GET(request: Request) {
     }
     const db = getDb(databaseUrl);
     orderRecords = await listActiveOrders(db, date);
-    persistedStatuses = undefined;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Database unavailable";
     if (process.env.NODE_ENV === "development") {
@@ -115,7 +113,7 @@ export async function GET(request: Request) {
     }, { status: 503 });
   }
   }
-  const baseAnswer = answerStatus({ location, stateCode, date, time, orderRecords, currentStatuses: persistedStatuses?.map((status) => ({ flagType: status.flagType, status: status.status, orderIds: status.orderIds, sourceUrl: status.sourceUrl, checkedAt: status.checkedAt })) });
+  const baseAnswer = answerStatus({ location, stateCode, date, time, orderRecords });
   const answer = demo && process.env.NODE_ENV === "development"
     ? { ...baseAnswer, coverageNotice: "Local demo mode: this response uses a development fixture, not live database data." }
     : baseAnswer;

@@ -105,15 +105,6 @@ export default function AdminConsole({ initialData, operatorEmail }: { initialDa
         </button>) : <p className="green">QUEUE CLEAR</p>}</div>
       </section>
 
-      <section className="ops-panel"><h2>STATUS COVERAGE REVIEW <b className="amber">{data.statusReview.length}</b></h2>
-        <div className="ops-list static">{data.statusReview.length ? data.statusReview.map((row) => <div key={row.id}>
-          <strong>{row.jurisdiction.name} · {row.flagType === "us" ? "U.S. flag" : "State flag"}</strong>
-          <span>{when(row.checkedAt)} · {row.sourceName || row.sourceId || "NO SOURCE"}</span>
-          <em className="amber">{row.reason}</em>
-          {row.sourceUrl && <a className="status-source-link" href={row.sourceUrl} target="_blank" rel="noreferrer">[OPEN SOURCE ↗]</a>}
-        </div>) : <p className="green">COVERAGE CLEAR</p>}</div>
-      </section>
-
       <section className="ops-panel"><h2>ACTIVE ORDERS <b className="green">{data.activeOrders.length}</b></h2>
         <div className="ops-list static">{data.activeOrders.length ? data.activeOrders.map((order) => <div key={order.id}><strong>{order.jurisdiction.name}</strong><span>{order.effectiveStart} → {order.effectiveEnd || order.effectiveEndCondition || "OPEN"}</span><em className="blue">US {order.mastStatus.us || "unknown"} / STATE {order.mastStatus.state || "unknown"}</em></div>) : <p>NO ACTIVE ORDERS</p>}</div>
       </section>

@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import type { getDb } from "../db/index.ts";
-import { currentStatus, inboundEmails, inboundReviewEvents, jurisdictions, orders, sourceSnapshots, sources } from "../db/schema.ts";
+import { inboundEmails, inboundReviewEvents, jurisdictions, orders, sourceSnapshots, sources } from "../db/schema.ts";
 import { inboundHealth } from "./inbound-health.ts";
 import { xPublishingStatus } from "./x-publishing.ts";
 import { emailText, parseInboundEmail } from "./afe-email.ts";
@@ -12,12 +12,15 @@ const iso = (value: Date | null) => value?.toISOString() || null;
 
 export async function adminDashboardData(db: Database, now = new Date()) {
   const today = now.toISOString().slice(0, 10);
-  const [queue, active, health, xDelivery, candidateRows, mastRows, statusReviewRows, auditRows] = await Promise.all([
+  const [queue, active, health, xDelivery, candidateRows, auditRows] = await Promise.all([
     db.select().from(inboundEmails).where(eq(inboundEmails.processingStatus, "quarantined")).orderBy(desc(inboundEmails.receivedAt)),
     db.select({ order: orders, jurisdiction: jurisdictions }).from(orders)
       .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
+      .innerJoin(sourceSnapshots, eq(orders.sourceSnapshotId, sourceSnapshots.id))
+      .innerJoin(sources, eq(sourceSnapshots.sourceId, sources.id))
       .where(and(
         eq(orders.status, "published"),
+        eq(sources.id, AFE_SOURCE_ID),
         inArray(orders.geographicScope, ["nationwide", "statewide"]),
         lte(orders.effectiveStart, today),
         or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, today)),
@@ -30,24 +33,8 @@ export async function adminDashboardData(db: Database, now = new Date()) {
       .innerJoin(sources, eq(sourceSnapshots.sourceId, sources.id))
       .where(and(eq(orders.status, "published"), eq(sources.id, AFE_SOURCE_ID)))
       .orderBy(desc(orders.updatedAt)),
-    db.select().from(currentStatus),
-    db.select({ status: currentStatus, jurisdiction: jurisdictions, sourceName: sources.name })
-      .from(currentStatus)
-      .innerJoin(jurisdictions, eq(currentStatus.jurisdictionId, jurisdictions.id))
-      .leftJoin(sources, eq(currentStatus.sourceId, sources.id))
-      .where(and(
-        ne(jurisdictions.level, "federal"),
-        or(eq(currentStatus.status, "uncertain"), eq(currentStatus.confidence, "review")),
-      ))
-      .orderBy(asc(jurisdictions.name), asc(currentStatus.flagType)),
     db.select().from(inboundReviewEvents).orderBy(desc(inboundReviewEvents.createdAt)).limit(200),
   ]);
-  const mastByJurisdiction = new Map<string, Record<string, string>>();
-  for (const row of mastRows) {
-    const statuses = mastByJurisdiction.get(row.jurisdictionId) || {};
-    statuses[row.flagType] = row.status;
-    mastByJurisdiction.set(row.jurisdictionId, statuses);
-  }
   const auditsByInbound = new Map<string, typeof auditRows>();
   for (const event of auditRows) {
     const events = auditsByInbound.get(event.inboundEmailId) || [];
@@ -68,21 +55,14 @@ export async function adminDashboardData(db: Database, now = new Date()) {
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       jurisdiction,
-      mastStatus: mastByJurisdiction.get(jurisdiction.id) || {},
-    })),
-    statusReview: statusReviewRows.map(({ status, jurisdiction, sourceName }) => ({
-      id: status.id,
-      jurisdiction,
-      flagType: status.flagType,
-      status: status.status,
-      confidence: status.confidence,
-      sourceId: status.sourceId,
-      sourceName,
-      sourceUrl: status.sourceUrl,
-      checkedAt: status.checkedAt.toISOString(),
-      reason: status.sourceId
-        ? `The latest ${status.flagType === "us" ? "U.S." : "state"} flag result could not be verified.`
-        : `No verified live ${status.flagType === "us" ? "U.S." : "state"} flag source is connected for this jurisdiction.`,
+      mastStatus: {
+        us: order.flagTypes.includes("us") ? "half_mast" : "full_mast",
+        state: order.flagTypes.includes("state")
+          ? "half_mast"
+          : jurisdiction.level === "federal" && order.flagTypes.includes("us")
+            ? "below_us"
+            : "full_mast",
+      },
     })),
     health,
     xDelivery: {

@@ -1,6 +1,5 @@
 import type { getDb } from "../db/index.ts";
 import { listActiveOrders } from "../db/orders.ts";
-import { getCurrentStatuses } from "../db/status.ts";
 import { answerStatus } from "./answer-engine.ts";
 import type { JurisdictionDefinition } from "./jurisdictions.ts";
 import type { StatusAnswer } from "./types.ts";
@@ -30,7 +29,6 @@ export async function resolveLiveStatus(
   const date = options.date || clock.date;
   const time = options.time ?? (options.date ? undefined : clock.time);
   const orderRecords = await listActiveOrders(db, date);
-  const currentStatuses = await getCurrentStatuses(db, jurisdiction.id);
   return answerStatus({
     location: jurisdiction.name,
     stateCode: jurisdiction.stateCode,
@@ -38,13 +36,6 @@ export async function resolveLiveStatus(
     time,
     checkedAt: (options.now || new Date()).toISOString(),
     orderRecords,
-    currentStatuses: currentStatuses.map((status) => ({
-      flagType: status.flagType,
-      status: status.status,
-      orderIds: status.orderIds,
-      sourceUrl: status.sourceUrl,
-      checkedAt: status.checkedAt,
-    })),
   });
 }
 
