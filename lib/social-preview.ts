@@ -20,6 +20,11 @@ export type PreviewSnapshot = {
   createdAt: Date;
 };
 
+/** The image attached to an alert shows the lowering being announced. */
+export function announcementPreviewStatuses() {
+  return { usStatus: "half_mast" as const, stateStatus: "half_mast" as const };
+}
+
 export async function ensurePreviewTable(db: Database) {
   await db.execute(sql`CREATE TABLE IF NOT EXISTS "social_preview_snapshots" (
     "token" text PRIMARY KEY NOT NULL,
@@ -49,7 +54,10 @@ export async function ensurePreviewSnapshot(db: Database, order: HalfMastOrder, 
   if (existing) return existing;
   const jurisdiction = jurisdictionByCode(order.jurisdiction.stateCode || "");
   if (!jurisdiction) throw new Error("A supported jurisdiction is required for an X preview.");
-  const statuses = flagStatuses(await resolveLiveStatus(db, jurisdiction));
+  // An X post is an announcement, not a point-in-time status report. Orders
+  // often arrive before their effective date, so using the live lookup here
+  // would freeze an otherwise correct announcement with flags at full mast.
+  const statuses = announcementPreviewStatuses();
   const token = createShareToken();
   await db.insert(socialPreviewSnapshots).values({
     token,

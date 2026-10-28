@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 const { jurisdictionByCode, jurisdictionBySlug, jurisdictionCatalog, reservedJurisdictionSlugs } = await import("../lib/jurisdictions.ts");
 const { createShareToken, previewAltText, previewImageUrl, previewTitle, validShareToken } = await import("../lib/share-preview-core.ts");
+const { announcementPreviewStatuses } = await import("../lib/social-preview.ts");
 const { previewFlagPresentation, previewGeometry } = await import("../lib/preview-image.ts");
 
 test("every jurisdiction has a unique canonical slug and flag asset", () => {
@@ -35,6 +36,10 @@ test("preview geometry defines exact full, half, below-US, and uncertain positio
   assert.equal(previewFlagPresentation("half_mast").offset, (previewGeometry.poleHeight - previewGeometry.flagHeight) / 2);
   assert.equal(previewGeometry.width, 1200);
   assert.equal(previewGeometry.height, 630);
+});
+
+test("announcement previews always show the lowering being announced", () => {
+  assert.deepEqual(announcementPreviewStatuses(), { usStatus: "half_mast", stateStatus: "half_mast" });
 });
 
 test("preview alt text describes both immutable flag positions", () => {

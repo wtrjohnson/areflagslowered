@@ -48,11 +48,11 @@ function monthAndDay(date: Date) {
 
 function formatXDates(start: string, end?: string) {
   const first = monthAndDay(calendarDate(start));
-  if (!end) return `${first.month}, ${first.day}`;
+  if (!end || end === start) return `Effective: ${first.month} ${first.day}`;
   const last = monthAndDay(calendarDate(end));
   return first.month === last.month
-    ? `${first.month}, ${first.day}–${last.day}`
-    : `${first.month}, ${first.day}–${last.month}, ${last.day}`;
+    ? `Effective: ${first.month} ${first.day}–${last.day}`
+    : `Effective: ${first.month} ${first.day}–${last.month} ${last.day}`;
 }
 
 /**
