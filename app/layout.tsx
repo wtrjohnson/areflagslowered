@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: { type: "website", url: "/", siteName: "Are Flags Lowered?", title, description },
   twitter: { card: "summary", title, description },
-  icons: { icon: "/favicon.svg" },
+  icons: { icon: [{ url: "/favicon.jpg", type: "image/jpeg" }] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
