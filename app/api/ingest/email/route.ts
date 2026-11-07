@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { ingestAfeEmail } from "../../../../lib/afe-ingestion.ts";
 import { notifyInboundIssue } from "../../../../lib/monitoring.ts";
+import { exceedsContentLength, MAX_INBOUND_EMAIL_BYTES, secretMatches } from "../../../../lib/request-security.ts";
 
 function isRawMimeMessage(value: string) {
   return /^(?:[\w-]+:[^\r\n]*\r?\n){2,}\r?\n/.test(value);
 }
 
-function authorized(request: Request) {
+async function authorized(request: Request) {
   const expected = process.env.CLOUDMAILIN_SHARED_SECRET;
   if (!expected) return false;
   const supplied = request.headers.get("x-cloudmailin-secret") || request.headers.get("x-webhook-secret") || request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  return supplied === expected;
+  return secretMatches(expected, supplied);
 }
 
 async function rawEmailFrom(request: Request) {
@@ -34,7 +35,8 @@ async function rawEmailFrom(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (exceedsContentLength(request, MAX_INBOUND_EMAIL_BYTES)) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
   try {
     const { raw, providerMessageId } = await rawEmailFrom(request);
     if (!raw.trim()) return NextResponse.json({ error: "No email payload supplied." }, { status: 400 });
@@ -43,6 +45,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Email ingestion failed.";
     await notifyInboundIssue("webhook processing failed", message);
-    return NextResponse.json({ error: message }, { status: 422 });
+    return NextResponse.json({ error: "Email could not be processed." }, { status: 422 });
   }
 }

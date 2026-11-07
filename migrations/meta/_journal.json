@@ -71,6 +71,13 @@
       "when": 1794020789000,
       "tag": "0009_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794022000000,
+      "tag": "0010_feedback_rate_limits",
+      "breakpoints": true
     }
   ]
 }

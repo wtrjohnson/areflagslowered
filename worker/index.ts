@@ -31,17 +31,29 @@ const worker = {
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-      return handleImageOptimization(request, {
+      return secureResponse(await handleImageOptimization(request, {
         fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
         transformImage: async (body, { width, format, quality }) => {
           const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
           return result.response();
         },
-      }, allowedWidths);
+      }, allowedWidths), url);
     }
 
-    return handler.fetch(request, env, ctx);
+    return secureResponse(await handler.fetch(request, env, ctx), url);
   },
 };
+
+function secureResponse(response: Response, url: URL) {
+  const headers = new Headers(response.headers);
+  headers.set("content-security-policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
+  headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("x-frame-options", "DENY");
+  headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  headers.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  if (url.pathname === "/api/status") headers.set("cache-control", "public, max-age=30, s-maxage=60, stale-while-revalidate=120");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 export default worker;

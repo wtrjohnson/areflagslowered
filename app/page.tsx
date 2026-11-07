@@ -466,6 +466,7 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
             <label>Message<textarea required minLength={3} maxLength={3000} value={feedbackMessage} onChange={(event) => setFeedbackMessage(event.target.value)} placeholder="What should we know?" /></label>
             <div className="feedback-contact-fields"><label>Name <span>(optional)</span><input value={feedbackName} maxLength={120} onChange={(event) => setFeedbackName(event.target.value)} autoComplete="name" /></label><label>Email <span>(optional)</span><input type="email" value={feedbackEmail} maxLength={254} onChange={(event) => setFeedbackEmail(event.target.value)} autoComplete="email" /></label></div>
             <label className="feedback-honeypot" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={feedbackWebsite} onChange={(event) => setFeedbackWebsite(event.target.value)} /></label>
+            <p className="feedback-privacy">We use feedback to improve the site. Name and email are only used to reply, and feedback is deleted after 90 days.</p>
             {feedbackStatus === "error" && <p className="feedback-error" role="alert">{feedbackError}</p>}
             <button className="feedback-submit" type="submit" disabled={feedbackStatus === "submitting"}>{feedbackStatus === "submitting" ? "Sending…" : "Send feedback"}</button>
           </>}

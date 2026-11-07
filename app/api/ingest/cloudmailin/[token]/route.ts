@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ingestAfeEmail } from "../../../../../lib/afe-ingestion.ts";
 import { notifyInboundIssue } from "../../../../../lib/monitoring.ts";
+import { exceedsContentLength, MAX_INBOUND_EMAIL_BYTES, secretMatches } from "../../../../../lib/request-security.ts";
 
 function isRawMimeMessage(value: string) {
   return /^(?:[\w-]+:[^\r\n]*\r?\n){2,}\r?\n/.test(value);
@@ -9,7 +10,10 @@ function isRawMimeMessage(value: string) {
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
   const expected = process.env.CLOUDMAILIN_WEBHOOK_TOKEN || process.env.CLOUDMAILIN_SHARED_SECRET;
-  if (!expected || token !== expected) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const headerToken = request.headers.get("x-cloudmailin-secret") || request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const legacyPathTokenEnabled = process.env.CLOUDMAILIN_ALLOW_LEGACY_URL_TOKEN !== "false";
+  if (!(await secretMatches(expected, headerToken)) && !(legacyPathTokenEnabled && await secretMatches(expected, token))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (exceedsContentLength(request, MAX_INBOUND_EMAIL_BYTES)) return NextResponse.json({ error: "Payload too large." }, { status: 413 });
   try {
     const contentType = request.headers.get("content-type") || "";
     let raw = "";
@@ -35,6 +39,6 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   } catch (error) {
     const message = error instanceof Error ? error.message : "Email ingestion failed.";
     await notifyInboundIssue("CloudMailin processing failed", message);
-    return NextResponse.json({ error: message }, { status: 422 });
+    return NextResponse.json({ error: "Email could not be processed." }, { status: 422 });
   }
 }

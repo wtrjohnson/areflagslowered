@@ -148,6 +148,12 @@ export const feedback = pgTable("feedback", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({ createdAtIdx: index("feedback_created_at_idx").on(table.createdAt) }));
 
+export const feedbackRateLimits = pgTable("feedback_rate_limits", {
+  id: text("id").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 export const currentStatus = pgTable("current_status", {
   id: text("id").primaryKey(),
   jurisdictionId: text("jurisdiction_id").notNull().references(() => jurisdictions.id),

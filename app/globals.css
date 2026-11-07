@@ -88,6 +88,7 @@ textarea, select { font: inherit; }
 .feedback-panel textarea { min-height: 84px; resize: vertical; line-height: 1.35; }
 .feedback-contact-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .feedback-honeypot { position: absolute; left: -10000px; }
+.feedback-privacy { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
 .feedback-submit, .feedback-thanks button { width: 100%; margin-top: 14px; border: 1px solid var(--ink); padding: 9px 11px; background: var(--ink); color: #fff; cursor: pointer; font-weight: 700; }
 .feedback-submit:disabled { cursor: wait; opacity: .65; }
 .feedback-error { margin: 10px 0 0; color: #b42318; font-size: 13px; line-height: 1.3; }
