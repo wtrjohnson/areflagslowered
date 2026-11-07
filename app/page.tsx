@@ -460,15 +460,9 @@ export default function Home({ initialStateCode, initialAnswer }: { initialState
         </div>
       </section>
 
-      <section className="status-guide" aria-labelledby="status-guide-heading">
-        <h2 id="status-guide-heading">Flag status, explained</h2>
-        <p>Check the current U.S. and state flag position above. Orders can change during the day, so this page is updated as new official information is reviewed.</p>
-        <nav aria-label="Learn more about flag status"><Link href="/how-we-verify">How we verify orders</Link><Link href="/half-staff-vs-half-mast">Half-staff vs. half-mast</Link><Link href="/faq">Frequently asked questions</Link></nav>
-      </section>
-
       <footer className="site-footer">
         <p>Are Flags Lowered? is an independent public-information service. Always follow the controlling official order for your location.</p>
-        <nav aria-label="Site information"><Link href="/how-we-verify">Methodology</Link><Link href="/corrections">Corrections</Link><Link href="/privacy">Privacy</Link></nav>
+        <nav aria-label="Site information"><Link href="/privacy">Privacy</Link></nav>
       </footer>
 
       <aside className="feedback-widget" aria-label="Feedback">
