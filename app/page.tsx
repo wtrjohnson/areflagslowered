@@ -57,14 +57,17 @@ function fallbackNationalAnswer(date: string) {
 }
 
 async function fetchStatusAnswer(state: Jurisdiction, signal: AbortSignal) {
-  const params = new URLSearchParams({ location: state.name, state: state.stateCode || "", date: today });
+  // The server resolves the current date and time in the selected state's
+  // timezone. Sending the browser's UTC date made late-evening orders appear
+  // expired in states that were still on the prior local date.
+  const params = new URLSearchParams({ location: state.name, state: state.stateCode || "" });
   const response = await fetch(`/api/status?${params}`, { signal });
   if (!response.ok) throw new Error("Status unavailable");
   return response.json() as Promise<StatusAnswer>;
 }
 
 async function fetchNationalAnswer(signal: AbortSignal) {
-  const params = new URLSearchParams({ location: "United States", date: today });
+  const params = new URLSearchParams({ location: "United States" });
   const response = await fetch(`/api/status?${params}`, { signal });
   if (!response.ok) throw new Error("Status unavailable");
   return response.json() as Promise<StatusAnswer>;

@@ -47,14 +47,26 @@ export async function GET(request: Request) {
         // Local Node execution uses process.env.
       }
       const db = getDb(databaseUrl);
-      const activeOrders = await listActiveOrders(db, date);
+      const now = new Date();
+      const hasRequestedDate = url.searchParams.has("date");
+      const jurisdictionTimes = allJurisdictions.map((jurisdiction) => {
+        const timeZone = "timeZone" in jurisdiction ? jurisdiction.timeZone : "America/New_York";
+        const clock = hasRequestedDate ? undefined : localDateTime(timeZone, now);
+        return { jurisdiction, date: hasRequestedDate ? date : clock!.date, time: hasRequestedDate ? undefined : clock!.time };
+      });
+      const ordersByDate = new Map(await Promise.all([...new Set(jurisdictionTimes.map((value) => value.date))].map(async (jurisdictionDate) => [jurisdictionDate, await listActiveOrders(db, jurisdictionDate)] as const)));
       const checkedAt = new Date().toISOString();
-      const rows = allJurisdictions.flatMap((jurisdiction) => (["us", "state"] as const).map((flagType) => {
-        const matching = activeOrders.filter((order) => order.flagTypes.includes(flagType) && (order.scope === "nationwide" || order.jurisdiction.id === jurisdiction.id));
-        const federalOrder = activeOrders.some((order) => order.scope === "nationwide" && order.flagTypes.includes("us"));
-        const status: "half_mast" | "full_mast" | "below_us" = matching.length ? "half_mast" : flagType === "state" && federalOrder ? "below_us" : "full_mast";
-        return { jurisdiction: { id: jurisdiction.id, name: jurisdiction.name, stateCode: jurisdiction.stateCode || null, level: jurisdiction.level }, status: { jurisdictionId: jurisdiction.id, flagType, status, sourceUrl: null, checkedAt } };
-      }));
+      const rows = jurisdictionTimes.flatMap(({ jurisdiction, date: jurisdictionDate, time }) => answerStatus({
+        location: jurisdiction.name,
+        stateCode: jurisdiction.stateCode,
+        date: jurisdictionDate,
+        time,
+        checkedAt,
+        orderRecords: ordersByDate.get(jurisdictionDate),
+      }).flagResults.map((result) => ({
+        jurisdiction: { id: jurisdiction.id, name: jurisdiction.name, stateCode: jurisdiction.stateCode || null, level: jurisdiction.level },
+        status: { jurisdictionId: jurisdiction.id, flagType: result.flagType, status: result.status, sourceUrl: null, checkedAt },
+      })));
       const wantsText = url.searchParams.get("format") === "text" || request.headers.get("accept")?.includes("text/plain");
       if (wantsText) return new Response(renderAllStatusesText(rows, checkedAt), { headers: { "content-type": "text/plain; charset=utf-8" } });
       return NextResponse.json({ date, checkedAt, statuses: rows, summary: `All current flag statuses as of ${checkedAt}.` });

@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+const { localDateTime } = await import("../lib/live-status.ts");
+
+test("uses Montana's local date before midnight Mountain Time", () => {
+  assert.deepEqual(localDateTime("America/Denver", new Date("2026-11-07T02:49:00.000Z")), { date: "2026-11-06", time: "19:49" });
+});
+
 const { answerStatus } = await import("../lib/answer-engine.ts");
 const { createSocialDraft } = await import("../lib/social.ts");
 const { renderStatusText } = await import("../lib/render.ts");
