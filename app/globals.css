@@ -74,9 +74,9 @@ textarea, select { font: inherit; }
 .status-uncertain .reason span { color: var(--warning); }
 .timing { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
 .meta-row { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 12px; color: var(--muted); font-size: 12px; }
-.feedback-widget { position: fixed; z-index: 20; right: 24px; bottom: 24px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.feedback-launcher { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--ink); border-radius: 50%; background: var(--ink); color: #fff; cursor: pointer; font-size: 23px; font-weight: 400; line-height: 1; box-shadow: 3px 3px 0 rgba(17,17,17,.16); }
-.feedback-launcher:hover { background: var(--blue); border-color: var(--blue); }
+.feedback-widget { position: fixed; z-index: 20; right: 20px; bottom: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.feedback-launcher { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #e8e8e3; color: var(--muted); cursor: pointer; font-size: 18px; font-weight: 400; line-height: 1; }
+.feedback-launcher:hover { border-color: #bcbcb6; background: #dcdcd6; color: var(--ink); }
 .feedback-launcher:focus-visible, .feedback-close:focus-visible, .feedback-panel input:focus-visible, .feedback-panel textarea:focus-visible, .feedback-panel button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 .feedback-panel { width: min(340px, calc(100vw - 32px)); border: 1px solid var(--ink); padding: 15px; background: #fff; box-shadow: 5px 5px 0 rgba(17,17,17,.12); }
 .feedback-panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -111,7 +111,7 @@ textarea, select { font: inherit; }
   .flag-half_mast .flag-cloth { --flag-y: calc(112.5px - 50%); }
   .flag-uncertain .flag-cloth { --flag-y: 38px; }
   .status-copy { margin-top: 24px; }
-  .feedback-widget { right: 16px; bottom: 16px; }
+  .feedback-widget { right: 14px; bottom: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
