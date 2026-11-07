@@ -139,6 +139,15 @@ export const inboundReviewEvents = pgTable("inbound_review_events", {
   inboundCreatedIdx: index("inbound_review_events_inbound_created_idx").on(table.inboundEmailId, table.createdAt),
 }));
 
+export const feedback = pgTable("feedback", {
+  id: text("id").primaryKey(),
+  message: text("message").notNull(),
+  name: text("name"),
+  email: text("email"),
+  pagePath: text("page_path"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({ createdAtIdx: index("feedback_created_at_idx").on(table.createdAt) }));
+
 export const currentStatus = pgTable("current_status", {
   id: text("id").primaryKey(),
   jurisdictionId: text("jurisdiction_id").notNull().references(() => jurisdictions.id),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { answerStatus } from "../lib/answer-engine.ts";
 import { jurisdictionByCode, jurisdictionCatalog } from "../lib/jurisdictions.ts";
 import { flagAssetPath } from "../lib/flag-assets.ts";
@@ -116,6 +116,13 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
   const [loading, setLoading] = useState(true);
   const [refreshingState, setRefreshingState] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackName, setFeedbackName] = useState("");
+  const [feedbackEmail, setFeedbackEmail] = useState("");
+  const [feedbackWebsite, setFeedbackWebsite] = useState("");
+  const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "submitting" | "sent" | "error">("idle");
+  const [feedbackError, setFeedbackError] = useState("");
   const statePickerRef = useRef<HTMLDivElement>(null);
   const stateTriggerRef = useRef<HTMLButtonElement>(null);
   const stateSearchRef = useRef<HTMLInputElement>(null);
@@ -174,6 +181,38 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
     document.addEventListener("pointerdown", closeOnOutsideClick);
     return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
   }, []);
+
+  useEffect(() => {
+    if (!feedbackOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFeedbackOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [feedbackOpen]);
+
+  const submitFeedback = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFeedbackStatus("submitting");
+    setFeedbackError("");
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: feedbackMessage, name: feedbackName, email: feedbackEmail, website: feedbackWebsite, pagePath: window.location.pathname }),
+      });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "We couldn't save your feedback right now.");
+      setFeedbackStatus("sent");
+      setFeedbackMessage("");
+      setFeedbackName("");
+      setFeedbackEmail("");
+      setFeedbackWebsite("");
+    } catch (error) {
+      setFeedbackStatus("error");
+      setFeedbackError(error instanceof Error ? error.message : "We couldn't save your feedback right now.");
+    }
+  };
 
   useEffect(() => {
     if (!stateOpen) return;
@@ -419,6 +458,20 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
           </>}
         </div>
       </section>
+
+      <aside className="feedback-widget" aria-label="Feedback">
+        {feedbackOpen && <form className="feedback-panel" onSubmit={submitFeedback}>
+          <div className="feedback-panel-heading"><h2>Send feedback</h2><button type="button" className="feedback-close" aria-label="Close feedback form" onClick={() => setFeedbackOpen(false)}>×</button></div>
+          {feedbackStatus === "sent" ? <div className="feedback-thanks"><p>Thanks for helping improve this.</p><button type="button" onClick={() => { setFeedbackStatus("idle"); setFeedbackOpen(false); }}>Done</button></div> : <>
+            <label>Message<textarea required minLength={3} maxLength={3000} value={feedbackMessage} onChange={(event) => setFeedbackMessage(event.target.value)} placeholder="What should we know?" /></label>
+            <div className="feedback-contact-fields"><label>Name <span>(optional)</span><input value={feedbackName} maxLength={120} onChange={(event) => setFeedbackName(event.target.value)} autoComplete="name" /></label><label>Email <span>(optional)</span><input type="email" value={feedbackEmail} maxLength={254} onChange={(event) => setFeedbackEmail(event.target.value)} autoComplete="email" /></label></div>
+            <label className="feedback-honeypot" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={feedbackWebsite} onChange={(event) => setFeedbackWebsite(event.target.value)} /></label>
+            {feedbackStatus === "error" && <p className="feedback-error" role="alert">{feedbackError}</p>}
+            <button className="feedback-submit" type="submit" disabled={feedbackStatus === "submitting"}>{feedbackStatus === "submitting" ? "Sending…" : "Send feedback"}</button>
+          </>}
+        </form>}
+        <button type="button" className="feedback-launcher" aria-label="Send feedback" aria-expanded={feedbackOpen} onClick={() => { setFeedbackOpen((open) => !open); setFeedbackStatus("idle"); setFeedbackError(""); }}>?</button>
+      </aside>
     </main>
   );
 }
