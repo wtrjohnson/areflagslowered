@@ -40,12 +40,27 @@ function statusWord(status: StatusAnswer["status"]) {
   return status === "half_mast" ? "Yes." : status === "uncertain" ? "Not sure." : "No.";
 }
 
+function displayDate(date: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T12:00:00Z`));
+}
+
 function dateText(order: FlagResult["orders"][number]) {
-  const start = `${order.effectiveStart}${order.effectiveStartTime ? ` at ${order.effectiveStartTime}` : ""}`;
+  const startDate = displayDate(order.effectiveStart);
+  const start = `${startDate}${order.effectiveStartTime ? ` at ${order.effectiveStartTime}` : ""}`;
   if (!order.effectiveEnd) return `From ${start} until further notice`;
-  const end = `${order.effectiveEnd}${order.effectiveEndTime ? ` at ${order.effectiveEndTime}` : order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : ""}`;
-  if (order.effectiveEnd === order.effectiveStart && order.effectiveStartTime && order.effectiveEndTime) return `On ${order.effectiveStart} from ${order.effectiveStartTime} to ${order.effectiveEndTime}`;
-  return order.effectiveEnd === order.effectiveStart ? `On ${start} through ${end}` : `From ${start} through ${end}`;
+  const endDate = displayDate(order.effectiveEnd);
+  const endDetail = order.effectiveEndTime ? ` at ${order.effectiveEndTime}` : order.effectiveEndCondition ? ` at ${order.effectiveEndCondition}` : "";
+  const end = `${endDate}${endDetail}`;
+  if (order.effectiveEnd === order.effectiveStart) {
+    if (order.effectiveStartTime && order.effectiveEndTime) return `On ${startDate} from ${order.effectiveStartTime} to ${order.effectiveEndTime}`;
+    if (order.effectiveEndTime || order.effectiveEndCondition) return `On ${start} until ${order.effectiveEndTime || order.effectiveEndCondition}`;
+    return `On ${startDate}`;
+  }
+  return `From ${start} through ${end}`;
 }
 
 function fallbackAnswer(state: Jurisdiction, date: string) {
