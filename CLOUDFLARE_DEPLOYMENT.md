@@ -11,6 +11,8 @@ This application is a full-stack Vinext application with server-rendered pages a
 5. Set the deploy command to `npx wrangler deploy`.
 6. Save and deploy. Future pushes to `main` will deploy automatically; pull requests receive preview deployments.
 
+The Worker name is configured as `areflagslowered` to match the Cloudflare Worker created during import.
+
 ## Environment variables
 
 In **Worker** > **Settings** > **Environment variables**, add the production values below. Store the first group as **Secrets** and the second as plain **Variables**. Never commit their real values.
