@@ -15,12 +15,12 @@ textarea, select { font: inherit; }
 .location-context { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 11px; min-height: 48px; font-size: clamp(24px, 3vw, 35px); font-weight: 400; letter-spacing: -.065em; }
 .location-divider { color: var(--muted); }
 .state-picker { position: relative; }
-.state-trigger { display: inline-flex; align-items: center; gap: 8px; border: 0; border-bottom: 1px solid transparent; padding: 0 0 2px; background: transparent; color: var(--ink); cursor: pointer; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
+.state-trigger { display: inline-flex; align-items: center; gap: 8px; border: 0; border-bottom: 1px solid transparent; padding: 0 0 2px; background: transparent; color: var(--ink); cursor: pointer; font-size: inherit; font-weight: inherit; letter-spacing: -.025em; }
 .state-trigger:hover { border-bottom-color: var(--ink); }
 .state-trigger:focus-visible, .state-search:focus-visible, .state-filter-tab:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
 .chevron { margin-top: -5px; font-size: .9em; font-weight: 300; transition: transform 180ms ease; }
 .state-trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
-.state-menu { position: absolute; z-index: 10; top: calc(100% + 14px); left: 50%; width: min(360px, calc(100vw - 40px)); transform: translateX(-50%); border: 1px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 rgba(17,17,17,.1); padding: 10px; }
+.state-menu { position: absolute; z-index: 10; top: calc(100% + 14px); left: 50%; width: min(360px, calc(100vw - 40px)); transform: translateX(-50%); border: 1px solid var(--ink); background: var(--paper); box-shadow: 8px 8px 0 rgba(17,17,17,.1); padding: 10px; letter-spacing: normal; }
 .state-search { width: 100%; border: 1px solid var(--line); border-radius: 0; padding: 10px 12px; background: #fff; color: var(--ink); font-size: 15px; }
 .state-filter-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 8px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
 .state-filter-tab { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; border: 1px solid transparent; padding: 7px 6px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; white-space: nowrap; }
