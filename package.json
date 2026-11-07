@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
+    "deploy:cloudflare": "npm run build && wrangler deploy",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --experimental-strip-types --test tests/domain.test.mjs tests/api.test.mjs tests/white-house.test.mjs tests/state-sources.test.mjs tests/oklahoma-newsroom.test.mjs tests/newsroom.test.mjs tests/newsroom-discovery.test.mjs tests/georgia-orders.test.mjs tests/afe-email.test.mjs tests/x-publishing.test.mjs tests/flag-assets.test.mjs tests/social-preview.test.mjs tests/test-alert.test.mjs tests/state-picker.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
