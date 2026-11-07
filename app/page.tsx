@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { answerStatus } from "../lib/answer-engine.ts";
 import { jurisdictionByCode, jurisdictionCatalog } from "../lib/jurisdictions.ts";
 import { flagAssetPath } from "../lib/flag-assets.ts";
@@ -103,7 +104,7 @@ function relativeTime(value: string, now: number) {
   return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-export default function Home({ initialStateCode }: { initialStateCode?: string }) {
+export default function Home({ initialStateCode, initialAnswer }: { initialStateCode?: string; initialAnswer?: StatusAnswer }) {
   const initialState = initialStateCode ? jurisdictionByCode(initialStateCode) : undefined;
   const [selectedState, setSelectedState] = useState<Jurisdiction | null>(initialState || null);
   const [stateOpen, setStateOpen] = useState(false);
@@ -112,8 +113,8 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
   const [focusedStateId, setFocusedStateId] = useState(initialState?.id || "");
   const [menuStatuses, setMenuStatuses] = useState<Record<string, JurisdictionMenuStatus>>({});
   const [menuStatusesLoaded, setMenuStatusesLoaded] = useState(false);
-  const [answer, setAnswer] = useState<StatusAnswer>(() => initialState ? fallbackAnswer(initialState, today) : fallbackNationalAnswer(today));
-  const [loading, setLoading] = useState(true);
+  const [answer, setAnswer] = useState<StatusAnswer>(() => initialAnswer || (initialState ? fallbackAnswer(initialState, today) : fallbackNationalAnswer(today)));
+  const [loading, setLoading] = useState(!initialAnswer);
   const [refreshingState, setRefreshingState] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -261,8 +262,8 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
       rememberStatePreference(stateToLoad);
       setSelectedState(stateToLoad);
       setFocusedStateId(stateToLoad.id);
-      setAnswer(fallbackAnswer(stateToLoad, today));
-      setRefreshingState(true);
+      if (!initialAnswer) setAnswer(fallbackAnswer(stateToLoad, today));
+      if (initialAnswer) setRefreshingState(true);
       if (!initialState) window.history.replaceState(null, "", `/${stateToLoad.slug}`);
     }
     const request = stateToLoad
@@ -282,7 +283,7 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
         setRefreshingState(false);
     });
     return () => controller.abort();
-  }, [initialState]);
+  }, [initialAnswer, initialState]);
 
   const moveActiveState = (direction: number) => {
     if (!filteredStates.length) return;
@@ -458,6 +459,17 @@ export default function Home({ initialStateCode }: { initialStateCode?: string }
           </>}
         </div>
       </section>
+
+      <section className="status-guide" aria-labelledby="status-guide-heading">
+        <h2 id="status-guide-heading">Flag status, explained</h2>
+        <p>Check the current U.S. and state flag position above. Orders can change during the day, so this page is updated as new official information is reviewed.</p>
+        <nav aria-label="Learn more about flag status"><Link href="/how-we-verify">How we verify orders</Link><Link href="/half-staff-vs-half-mast">Half-staff vs. half-mast</Link><Link href="/faq">Frequently asked questions</Link></nav>
+      </section>
+
+      <footer className="site-footer">
+        <p>Are Flags Lowered? is an independent public-information service. Always follow the controlling official order for your location.</p>
+        <nav aria-label="Site information"><Link href="/how-we-verify">Methodology</Link><Link href="/corrections">Corrections</Link><Link href="/privacy">Privacy</Link></nav>
+      </footer>
 
       <aside className="feedback-widget" aria-label="Feedback">
         {feedbackOpen && <form className="feedback-panel" onSubmit={submitFeedback}>

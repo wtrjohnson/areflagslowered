@@ -6,6 +6,7 @@ import { getRuntimeDb } from "../../lib/runtime-db.ts";
 import { previewAltText, previewForJurisdiction, previewTitle, validShareToken } from "../../lib/social-preview.ts";
 import { previewImageUrl } from "../../lib/share-preview-core.ts";
 import { siteOrigin } from "../../lib/site-url.ts";
+import { currentPublicStatus } from "../../lib/current-status.ts";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -62,5 +63,11 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
 export default async function JurisdictionPage(props: PageProps) {
   const { jurisdiction } = await pageContext(props);
-  return <Home initialStateCode={jurisdiction.stateCode} />;
+  const initialAnswer = await currentPublicStatus(jurisdiction);
+  const origin = siteOrigin();
+  const structuredData = { "@context": "https://schema.org", "@graph": [
+    { "@type": "WebPage", name: `Are flags lowered in ${jurisdiction.name}?`, url: `${origin}/${jurisdiction.slug}`, description: `Current U.S. and ${jurisdiction.name} flag status.` },
+    { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Are Flags Lowered?", item: origin }, { "@type": "ListItem", position: 2, name: jurisdiction.name, item: `${origin}/${jurisdiction.slug}` }] },
+  ] };
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><Home initialStateCode={jurisdiction.stateCode} initialAnswer={initialAnswer} /></>;
 }

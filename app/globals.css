@@ -158,4 +158,26 @@ textarea, select { font: inherit; }
 .test-publish button:disabled { cursor: wait; opacity: .65; }
 .test-success { margin-top: 10px; color: #087329 !important; }
 .test-result ul { display: grid; gap: 5px; margin: 0; padding-left: 19px; color: var(--muted); font-size: 13px; }
+
+.status-guide, .site-footer { width: min(760px, calc(100% - 40px)); margin: 0 auto; }
+.status-guide { border-top: 1px solid var(--line); padding: 34px 0 28px; color: var(--muted); line-height: 1.55; }
+.status-guide h2 { margin: 0 0 9px; color: var(--ink); font-size: 20px; }
+.status-guide p { margin: 0; }
+.status-guide nav, .site-footer nav { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 15px; }
+.status-guide a, .site-footer a, .content-page a { color: var(--blue); text-underline-offset: 3px; }
+.site-footer { border-top: 1px solid var(--line); padding: 22px 0 74px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.site-footer p { margin: 0; }
+.site-footer nav { margin-top: 8px; }
+.content-page { width: min(760px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 40px; color: var(--ink); }
+.content-header { display: flex; justify-content: space-between; align-items: baseline; gap: 22px; border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+.content-brand { color: var(--ink) !important; font-weight: 800; text-decoration: none; letter-spacing: -.03em; }
+.content-header nav { display: flex; gap: 16px; font-size: 14px; }
+.content-page article { padding: 34px 0 18px; }
+.content-page h1 { margin: 0 0 24px; font-size: clamp(32px, 6vw, 48px); line-height: 1.05; letter-spacing: -.045em; }
+.content-page h2 { margin: 34px 0 10px; font-size: 22px; letter-spacing: -.025em; }
+.content-page p, .content-page li { line-height: 1.6; }
+.content-page ol { display: grid; gap: 8px; padding-left: 24px; }
+.faq-item { border-top: 1px solid var(--line); padding: 5px 0 14px; }
+.faq-item h2 { font-size: 20px; }
+@media (max-width: 520px) { .content-header { align-items: flex-start; flex-direction: column; gap: 9px; } .content-page h1 { font-size: 35px; } }
 @media (max-width: 680px) { .test-console { padding: 24px 18px 48px; } .test-console-header { align-items: flex-start; flex-direction: column; } .test-fields { grid-template-columns: 1fr; } .test-preview { justify-content: flex-start; gap: 28px; overflow-x: auto; } }
