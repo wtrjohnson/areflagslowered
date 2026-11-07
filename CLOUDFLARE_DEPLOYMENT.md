@@ -45,6 +45,8 @@ In **Worker** > **Settings** > **Environment variables**, add the production val
 
 Copy the corresponding values from the current deployment. Values left blank in the current deployment can remain unset unless that integration is being used.
 
+Production variables and secrets are intentionally managed in the Cloudflare dashboard. The Wrangler configuration uses `keep_vars` so GitHub deployments preserve them rather than overwriting or deleting dashboard-managed values.
+
 ## Domain and cutover
 
 1. After the first Worker deployment works on its temporary `workers.dev` URL, add `areflagslowered.com` as the Worker custom domain.
