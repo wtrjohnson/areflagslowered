@@ -46,6 +46,14 @@ export type AfeRevisionContext = {
   operatorNote: string;
 };
 
+/** Removes order-issuer attribution from the public explanation of an order. */
+export function publicReason(reason: string) {
+  return reason
+    .replace(/,\s*(?:as\s+)?(?:directed|ordered)\s+by\s+[^.!?]+(?=[.!?]?$)/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function extractAfeEmail(email: InboundEmail, apiKey = process.env.ANTHROPIC_API_KEY, model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6", revision?: AfeRevisionContext): Promise<AfeExtraction> {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -54,7 +62,7 @@ export async function extractAfeEmail(email: InboundEmail, apiKey = process.env.
     body: JSON.stringify({
       max_tokens: 2048,
       model,
-      system: "Extract only facts explicitly present in this American Flags Express alert. The actual instruction body and any proclamation determine scope; a marketing-style email heading must not broaden it. A city/town/village-only direction is municipal, and the city/town/village goes in localityName. Do not infer missing dates, scope, authority, or affected flags. Return null when a field is not stated. Use ISO dates only when the email states an unambiguous date. For cancellations, effectiveStart may be null when not stated. In namedEntities, list every explicitly named person and named organization mentioned in the reason text, using each name exactly as written without titles or role descriptions; use an empty array when none are named. Operator feedback may identify an extraction mistake but never authorizes facts absent from the source email.",
+      system: "Extract only facts explicitly present in this American Flags Express alert. The actual instruction body and any proclamation determine scope; a marketing-style email heading must not broaden it. A city/town/village-only direction is municipal, and the city/town/village goes in localityName. Do not infer missing dates, scope, authority, or affected flags. Return null when a field is not stated. Use ISO dates only when the email states an unambiguous date. For cancellations, effectiveStart may be null when not stated. In namedEntities, list only the people and organizations being honored, memorialized, or otherwise named as the reason for lowering flags. Never include the issuing authority, the official directing the order, or anyone named only in instructions, a title, or an attribution. Use names exactly as written without titles or role descriptions; use an empty array when none are named. Operator feedback may identify an extraction mistake but never authorizes facts absent from the source email.",
       tools: [{ name: "extract_american_flags_express_alert", description: "Return the normalized facts explicitly present in the alert email.", strict: true, input_schema: afeExtractionSchema }],
       tool_choice: { type: "tool", name: "extract_american_flags_express_alert" },
       messages: [{ role: "user", content: revision
@@ -99,7 +107,7 @@ export async function summarizeAfeReason(reason: string, namedEntities: string[]
     if (!missingFromSource.length) return sourceWording;
     throw new Error(`Reason summary omitted required names: ${missingNames.join(", ")}.`);
   }
-  return cleaned;
+  return publicReason(cleaned);
 }
 
 export function validateAfeExtraction(value: AfeExtraction) {

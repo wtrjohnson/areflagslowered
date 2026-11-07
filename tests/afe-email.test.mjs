@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const { parseInboundEmail, emailText } = await import("../lib/afe-email.ts");
-const { validateAfeExtraction } = await import("../lib/afe-extractor.ts");
+const { publicReason, validateAfeExtraction } = await import("../lib/afe-extractor.ts");
 const { selectStrongCanonicalOrder, validateAfeSender } = await import("../lib/afe-ingestion.ts");
 const fixture = await readFile(new URL("./fixtures/Pennsylvania - Half-Staff Alert - Bryce Kaufmann.eml", import.meta.url), "utf8");
 
@@ -15,6 +15,11 @@ test("parses the American Flags Express multipart email and quoted-printable tex
   assert.match(email.html, /Bryce Kaufmann/);
   assert.match(emailText(email), /Erie County/);
   assert.match(email.contentHash, /^[a-f0-9]{32}$/);
+});
+
+test("removes issuer attribution from a public reason", () => {
+  assert.equal(publicReason("Flags were lowered to honor Jay Rockefeller, as directed by Morrisey."), "Flags were lowered to honor Jay Rockefeller.");
+  assert.equal(publicReason("Flags were ordered by Governor Example."), "Flags were ordered by Governor Example.");
 });
 
 test("accepts direct and forwarded American Flags Express alerts", () => {
