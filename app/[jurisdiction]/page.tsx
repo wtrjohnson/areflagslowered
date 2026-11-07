@@ -30,10 +30,15 @@ async function pageContext({ params, searchParams }: PageProps) {
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { jurisdiction, preview: savedPreview, share } = await pageContext(props);
-  const preview = savedPreview || await previewForJurisdiction(await getRuntimeDb(), jurisdiction).catch(() => ({
-    token: "", socialDraftId: "", jurisdictionId: jurisdiction.id,
-    usStatus: "uncertain" as const, stateStatus: "uncertain" as const, createdAt: new Date(),
-  }));
+  let preview = savedPreview;
+  if (!preview) {
+    try {
+      preview = await previewForJurisdiction(await getRuntimeDb(), jurisdiction);
+    } catch {
+      preview = { token: "", socialDraftId: "", jurisdictionId: jurisdiction.id,
+        usStatus: "uncertain" as const, stateStatus: "uncertain" as const, createdAt: new Date() };
+    }
+  }
   const origin = siteOrigin();
   const cleanUrl = `${origin}/${jurisdiction.slug}`;
   const socialUrl = share ? `${cleanUrl}?share=${encodeURIComponent(share)}` : cleanUrl;
