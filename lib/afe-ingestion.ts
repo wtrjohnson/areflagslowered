@@ -4,6 +4,7 @@ import { inboundEmails, inboundReviewEvents, orders, sources, sourceSnapshots } 
 import { upsertJurisdiction, upsertOrder, upsertSource } from "../db/orders.ts";
 import { jurisdictionCatalog, federalJurisdiction } from "./jurisdictions.ts";
 import { emailText, hashText, parseInboundEmail, type InboundEmail } from "./afe-email.ts";
+import { selectOfficialSource, type OfficialSource } from "./official-source.ts";
 import { extractAfeEmail, summarizeAfeReason, validateAfeExtraction, type AfeExtraction } from "./afe-extractor.ts";
 import { notifyInboundIssue } from "./monitoring.ts";
 import { queueAndPublishXPost } from "./x-publishing.ts";
@@ -77,6 +78,16 @@ function publicScope(extraction: AfeExtraction) {
   return extraction.geographicScope === "nationwide" || extraction.geographicScope === "statewide";
 }
 
+function orderEvidence(source: OfficialSource) {
+  return {
+    officialSourceUrl: source.url,
+    officialSourceTitle: source.title,
+    officialSourcePublisher: source.publisher,
+    officialSourcePublishedAt: source.publishedAt,
+    officialSourceStatus: source.status === "needs_review" ? "not_available" as const : source.status,
+  };
+}
+
 export function validateAfeSender(email: InboundEmail) {
   const text = emailText(email);
   const isDirectAfeMessage = /@flagsexpress\.com\b/i.test(email.sender);
@@ -103,6 +114,14 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
     await db.update(inboundEmails).set({ extractedJson: extraction }).where(eq(inboundEmails.id, id));
     validateAfeExtraction(extraction);
     const reasonSummary = await summarizeAfeReason(extraction.reason, extraction.namedEntities, options.apiKey, options.model);
+    const officialSource = selectOfficialSource(email);
+    if (officialSource.status === "needs_review") {
+      const error = "A non-government source link was found and needs operator review before publication.";
+      const candidate = { ...extraction, reasonSummary, officialSource };
+      await db.update(inboundEmails).set({ extractedJson: candidate, processingStatus: "quarantined", error }).where(eq(inboundEmails.id, id));
+      await notifyInboundIssue("inbound alert needs review", `${email.subject}\n${error}`);
+      return { status: "quarantined", id, duplicate: false };
+    }
     const snapshotId = `afe-snapshot-${email.contentHash.slice(0, 24)}`;
     await db.insert(sourceSnapshots).values({ id: snapshotId, sourceId: AFE_SOURCE_ID, url: AFE_SOURCE_URL, retrievedAt: options.receivedAt || new Date(), contentHash: email.contentHash, content: rawEmail, parserStatus: "parsed" }).onConflictDoNothing();
     if (extraction.geographicScope === "municipal" || extraction.geographicScope === "county") {
@@ -126,7 +145,7 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
         instructionType: "order" as const, instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart,
         effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined,
         effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined,
-        timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: "published" as const,
+        timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, ...orderEvidence(officialSource), sourceSnapshotId: snapshotId, status: "published" as const,
         createdAt: (options.receivedAt || new Date()).toISOString(), alertType: extraction.alertType,
         geographicScope: extraction.geographicScope, sourceMessageId: email.messageId || options.providerMessageId,
       };
@@ -134,7 +153,7 @@ export async function ingestAfeEmail(rawEmail: string, options: { providerMessag
       await upsertOrder(db, publishedOrder);
       const xPost = await queueAndPublishXPost(db, publishedOrder);
       const processingStatus = matchedOrder ? "updated" : "published";
-      await db.update(inboundEmails).set({ extractedJson: { ...extraction, reasonSummary }, processingStatus, orderId: idForOrder }).where(eq(inboundEmails.id, id));
+      await db.update(inboundEmails).set({ extractedJson: { ...extraction, reasonSummary, officialSource }, processingStatus, orderId: idForOrder }).where(eq(inboundEmails.id, id));
       return { status: processingStatus, id, orderId: idForOrder, duplicate: false, xPost: xPost.status };
     }
     const error = supported ? "Correction or revision could not be matched to exactly one active order." : "The alert scope is not supported by the public status model.";
@@ -152,10 +171,13 @@ async function publishAfeInboundEmail(id: string, canonicalOrderId?: string) {
   const db = getDb();
   const row = (await db.select().from(inboundEmails).where(eq(inboundEmails.id, id)))[0];
   if (!row?.extractedJson) throw new Error("No extracted candidate is available for this inbound email.");
-  const extraction = row.extractedJson as AfeExtraction;
+  const extraction = row.extractedJson as AfeExtraction & { officialSource?: OfficialSource };
   validateAfeExtraction(extraction);
   if (extraction.geographicScope !== "nationwide" && extraction.geographicScope !== "statewide") throw new Error("Only nationwide and statewide orders can be approved in v1.");
   const email = parseInboundEmail(row.rawEmail);
+  const officialSource = extraction.officialSource || selectOfficialSource(email);
+  // A queued non-government link is never published as an official source.
+  const safeOfficialSource = officialSource.status === "needs_review" ? { status: "not_available" as const, publishedAt: officialSource.publishedAt } : officialSource;
   const jurisdiction = stateFor(extraction);
   const snapshotId = `afe-snapshot-${row.contentHash.slice(0, 24)}`;
   await db.insert(sourceSnapshots).values({ id: snapshotId, sourceId: AFE_SOURCE_ID, url: AFE_SOURCE_URL, retrievedAt: row.receivedAt, contentHash: row.contentHash, content: row.rawEmail, parserStatus: "parsed" }).onConflictDoNothing();
@@ -183,7 +205,7 @@ async function publishAfeInboundEmail(id: string, canonicalOrderId?: string) {
         effectiveEnd: extraction.effectiveEnd || matched.effectiveEnd || undefined,
         effectiveEndTime: extraction.effectiveEndTime || matched.effectiveEndTime || undefined,
         effectiveEndCondition: extraction.effectiveEndCondition || matched.effectiveEndCondition || undefined,
-        timeZone: extraction.timeZone || matched.timeZone || undefined, sourceUrl: AFE_SOURCE_URL,
+        timeZone: extraction.timeZone || matched.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, ...orderEvidence(safeOfficialSource),
         sourceSnapshotId: snapshotId, status: "rejected" as const, createdAt: matched.createdAt.toISOString(),
         alertType: extraction.alertType, geographicScope: extraction.geographicScope, sourceMessageId: email.messageId,
       };
@@ -200,7 +222,7 @@ async function publishAfeInboundEmail(id: string, canonicalOrderId?: string) {
       effectiveStart: extraction.effectiveStart, effectiveStartTime: extraction.effectiveStartTime || undefined,
       effectiveEnd: extraction.effectiveEnd || undefined, effectiveEndTime: extraction.effectiveEndTime || undefined,
       effectiveEndCondition: extraction.effectiveEndCondition || undefined, timeZone: extraction.timeZone || undefined,
-      sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: "published" as const,
+      sourceUrl: AFE_SOURCE_URL, ...orderEvidence(safeOfficialSource), sourceSnapshotId: snapshotId, status: "published" as const,
       createdAt: row.receivedAt.toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope,
       sourceMessageId: email.messageId,
     };
@@ -218,7 +240,7 @@ async function publishAfeInboundEmail(id: string, canonicalOrderId?: string) {
     instructionText: extraction.instructionText, effectiveStart: extraction.effectiveStart,
     effectiveStartTime: extraction.effectiveStartTime || undefined, effectiveEnd: extraction.effectiveEnd || undefined,
     effectiveEndTime: extraction.effectiveEndTime || undefined, effectiveEndCondition: extraction.effectiveEndCondition || undefined,
-    timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, sourceSnapshotId: snapshotId, status: "published" as const,
+    timeZone: extraction.timeZone || undefined, sourceUrl: AFE_SOURCE_URL, ...orderEvidence(safeOfficialSource), sourceSnapshotId: snapshotId, status: "published" as const,
     createdAt: row.receivedAt.toISOString(), alertType: extraction.alertType, geographicScope: extraction.geographicScope,
     sourceMessageId: email.messageId,
   };

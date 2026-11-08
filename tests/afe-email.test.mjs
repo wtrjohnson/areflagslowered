@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const { parseInboundEmail, emailText } = await import("../lib/afe-email.ts");
+const { selectOfficialSource } = await import("../lib/official-source.ts");
 const { publicReason, validateAfeExtraction } = await import("../lib/afe-extractor.ts");
 const { selectStrongCanonicalOrder, validateAfeSender } = await import("../lib/afe-ingestion.ts");
 const fixture = await readFile(new URL("./fixtures/Pennsylvania - Half-Staff Alert - Bryce Kaufmann.eml", import.meta.url), "utf8");
@@ -91,4 +92,22 @@ test("updates Minnesota's canonical order only with one strong match", () => {
   const original = { scope: "statewide", flagTypes: ["us", "state"], effectiveStart: "2026-08-14", issuingAuthority: "Governor Tim Walz", title: "Leslie R. Washington", reason: "In honor and remembrance of Leslie R. Washington." };
   assert.equal(selectStrongCanonicalOrder([original], revision), original);
   assert.equal(selectStrongCanonicalOrder([original, { ...original }], revision), undefined);
+});
+
+test("prefers a government proclamation link and never calls AFE official", () => {
+  const email = parseInboundEmail([
+    "From: American Flags Express <halfstaff@flagsexpress.com>", "Date: Fri, 7 Nov 2026 12:00:00 -0500",
+    "Content-Type: text/html", "", '<a href="https://flagsexpress.com/alert">Read alert</a> <a href="https://governor.example.gov/proclamations/flags.pdf">Official proclamation</a>',
+  ].join("\n"));
+  const source = selectOfficialSource(email);
+  assert.equal(source.status, "verified");
+  assert.equal(source.url, "https://governor.example.gov/proclamations/flags.pdf");
+  assert.equal(source.publisher, "governor.example.gov");
+});
+
+test("holds a non-government order link for review and marks a linkless alert unavailable", () => {
+  const uncertain = parseInboundEmail(["From: American Flags Express <halfstaff@flagsexpress.com>", "Content-Type: text/plain", "", "Official order: https://example.org/order"].join("\n"));
+  assert.equal(selectOfficialSource(uncertain).status, "needs_review");
+  const linkless = parseInboundEmail(["From: American Flags Express <halfstaff@flagsexpress.com>", "Content-Type: text/plain", "", "Flags should be lowered."].join("\n"));
+  assert.equal(selectOfficialSource(linkless).status, "not_available");
 });

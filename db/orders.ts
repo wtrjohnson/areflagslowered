@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { getDb } from "./index.ts";
 import { ingestionRuns, jurisdictions, orders, sourceChecks, sourceSnapshots, sources } from "./schema.ts";
 import type { HalfMastOrder, Jurisdiction, SourceSnapshot } from "../lib/types.ts";
@@ -31,6 +31,11 @@ function mapOrder(row: { orders: typeof orders.$inferSelect; jurisdictions: type
     geographicScope: row.orders.geographicScope as HalfMastOrder["geographicScope"],
     countyName: row.orders.countyName || undefined,
     sourceMessageId: row.orders.sourceMessageId || undefined,
+    officialSourceUrl: row.orders.officialSourceUrl || undefined,
+    officialSourceTitle: row.orders.officialSourceTitle || undefined,
+    officialSourcePublisher: row.orders.officialSourcePublisher || undefined,
+    officialSourcePublishedAt: asIso(row.orders.officialSourcePublishedAt),
+    officialSourceStatus: row.orders.officialSourceStatus as HalfMastOrder["officialSourceStatus"],
   };
 }
 
@@ -48,6 +53,22 @@ export async function listActiveOrders(db: Database, date: string) {
     .innerJoin(sources, eq(sourceSnapshots.sourceId, sources.id))
     .where(and(eq(orders.status, "published"), eq(sources.id, "american-flags-express-email"), inArray(orders.geographicScope, ["nationwide", "statewide"]), lte(orders.effectiveStart, date), or(isNull(orders.effectiveEnd), gte(orders.effectiveEnd, date))));
   return rows.map(mapOrder);
+}
+
+/** Historical records shown publicly must have a verified government document. */
+export async function listRecentOfficialOrders(db: Database, jurisdictionId: string, limit = 8) {
+  const rows = await db.select().from(orders)
+    .innerJoin(jurisdictions, eq(orders.jurisdictionId, jurisdictions.id))
+    .where(and(
+      eq(orders.status, "published"),
+      eq(orders.officialSourceStatus, "verified"),
+      or(eq(orders.jurisdictionId, jurisdictionId), eq(orders.scope, "nationwide")),
+    ))
+    .orderBy(desc(orders.effectiveStart), desc(orders.createdAt))
+    .limit(limit);
+  const unique = new Map<string, HalfMastOrder>();
+  for (const row of rows) unique.set(row.orders.id, mapOrder(row));
+  return [...unique.values()];
 }
 
 export async function upsertJurisdiction(db: Database, jurisdiction: Jurisdiction) {
@@ -112,6 +133,9 @@ export async function upsertOrder(db: Database, order: HalfMastOrder) {
     instructionType: order.instructionType, instructionText: order.instructionText,
     effectiveStart: order.effectiveStart, effectiveStartTime: order.effectiveStartTime, effectiveEnd: order.effectiveEnd, effectiveEndTime: order.effectiveEndTime,
     effectiveEndCondition: order.effectiveEndCondition, timeZone: order.timeZone, sourceUrl: order.sourceUrl,
+    officialSourceUrl: order.officialSourceUrl, officialSourceTitle: order.officialSourceTitle,
+    officialSourcePublisher: order.officialSourcePublisher, officialSourcePublishedAt: asDate(order.officialSourcePublishedAt),
+    officialSourceStatus: order.officialSourceStatus || "not_available",
     sourceSnapshotId: order.sourceSnapshotId, status: order.status, createdAt: asDate(order.createdAt)!,
     alertType: order.alertType || "new", geographicScope: order.geographicScope || order.scope, countyName: order.countyName,
     sourceMessageId: order.sourceMessageId,
@@ -121,6 +145,9 @@ export async function upsertOrder(db: Database, order: HalfMastOrder) {
     effectiveEndCondition: order.effectiveEndCondition, timeZone: order.timeZone, sourceSnapshotId: order.sourceSnapshotId, status: order.status,
     alertType: order.alertType || "new", geographicScope: order.geographicScope || order.scope, countyName: order.countyName,
     sourceMessageId: order.sourceMessageId,
+    officialSourceUrl: order.officialSourceUrl, officialSourceTitle: order.officialSourceTitle,
+    officialSourcePublisher: order.officialSourcePublisher, officialSourcePublishedAt: asDate(order.officialSourcePublishedAt),
+    officialSourceStatus: order.officialSourceStatus || "not_available",
     updatedAt: new Date(),
   }});
 }

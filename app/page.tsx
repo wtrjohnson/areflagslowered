@@ -64,6 +64,21 @@ function dateText(order: FlagResult["orders"][number]) {
   return `From ${start} through ${end}`;
 }
 
+function shortDateRange(order: FlagResult["orders"][number]) {
+  const start = displayDate(order.effectiveStart);
+  if (!order.effectiveEnd || order.effectiveEnd === order.effectiveStart) return start;
+  const end = displayDate(order.effectiveEnd);
+  return `${start}–${end}`;
+}
+
+function sourceDate(value?: string) {
+  return value ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value)) : "";
+}
+
+function checkedText(value: string, timeZone?: string) {
+  return `Last checked ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone: timeZone || "America/New_York" }).format(new Date(value))}`;
+}
+
 function fallbackAnswer(state: Jurisdiction, date: string) {
   return answerStatus({ location: state.name, stateCode: state.stateCode, date, checkedAt: `${today}T12:00:00.000Z` });
 }
@@ -93,17 +108,6 @@ function menuStatusLabel(status: JurisdictionMenuStatus) {
   return status === "half_mast" ? "Half-mast" : status === "below_us" ? "Below U.S." : status === "uncertain" ? "Review" : "Full mast";
 }
 
-function relativeTime(value: string, now: number) {
-  const elapsed = Math.max(0, now - new Date(value).getTime());
-  const minutes = Math.floor(elapsed / 60_000);
-  if (minutes < 1) return "Updated just now";
-  if (minutes < 60) return `Updated ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Updated ${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
-}
-
 export default function Home({ initialStateCode, initialAnswer }: { initialStateCode?: string; initialAnswer?: StatusAnswer }) {
   const initialState = initialStateCode ? jurisdictionByCode(initialStateCode) : undefined;
   const [selectedState, setSelectedState] = useState<Jurisdiction | null>(initialState || null);
@@ -116,7 +120,6 @@ export default function Home({ initialStateCode, initialAnswer }: { initialState
   const [answer, setAnswer] = useState<StatusAnswer>(() => initialAnswer || (initialState ? fallbackAnswer(initialState, today) : fallbackNationalAnswer(today)));
   const [loading, setLoading] = useState(!initialAnswer);
   const [refreshingState, setRefreshingState] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackName, setFeedbackName] = useState("");
@@ -232,11 +235,6 @@ export default function Home({ initialStateCode, initialAnswer }: { initialState
   }, [activeStateId, stateOpen]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     fetch("/api/status?all=true", { signal: AbortSignal.timeout(10000) })
       .then(async (response) => {
         if (!response.ok) throw new Error("Status list unavailable");
@@ -316,6 +314,7 @@ export default function Home({ initialStateCode, initialAnswer }: { initialState
         ? "uncertain"
         : "full_mast";
   const leadOrder = usResult?.orders[0] || stateResult?.orders[0];
+  const recentOrders = answer.recentOrders || [];
   const reason = leadOrder?.reason || (stateResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : stateResult?.status === "half_mast" ? stateResult.explanation : usResult?.status === "uncertain" ? "The official source needs review before we can give a definitive answer." : usResult?.explanation);
   const explanation = (() => {
     if (usResult?.status === "half_mast" && stateResult?.status === "half_mast") return "All flags to be flown at half-mast";
@@ -455,10 +454,25 @@ export default function Home({ initialStateCode, initialAnswer }: { initialState
             {explanation && <p className="status-explanation">{explanation}</p>}
             {displayStatus !== "full_mast" && <p className="reason"><strong>Why?</strong> <span>{reason || "No current official order found."}</span></p>}
             {leadOrder && <p className="timing">{dateText(leadOrder)}</p>}
-            <div className="meta-row"><span title={new Date(answer.lastCheckedAt).toLocaleString()}>{relativeTime(answer.lastCheckedAt, now)}</span></div>
+            {leadOrder && <div className="source-evidence">
+              {leadOrder.officialSourceUrl ? <a href={leadOrder.officialSourceUrl} target="_blank" rel="noreferrer">Official order</a> : <span>Official document not yet available</span>}
+              {(leadOrder.officialSourcePublisher || leadOrder.officialSourcePublishedAt) && <small>{[leadOrder.officialSourcePublisher, sourceDate(leadOrder.officialSourcePublishedAt)].filter(Boolean).join(" · ")}</small>}
+            </div>}
+            <div className="meta-row"><span title={new Date(answer.lastCheckedAt).toLocaleString()}>{checkedText(answer.lastCheckedAt, selectedState?.timeZone)}</span></div>
           </>}
         </div>
       </section>
+
+      {selectedState && recentOrders.length > 0 && <section className="recent-orders" aria-labelledby="recent-orders-heading">
+        <h2 id="recent-orders-heading">Recent official orders</h2>
+        <ol>
+          {recentOrders.map((order) => <li key={order.id}>
+            <p className="recent-order-date">{shortDateRange(order)}</p>
+            <div><p>{order.reason}</p><small>{order.flagTypes.includes("us") && order.flagTypes.includes("state") ? "U.S. and state flags" : order.flagTypes.includes("us") ? "U.S. flag" : "State flag"}</small></div>
+            <a href={order.officialSourceUrl} target="_blank" rel="noreferrer">Official order</a>
+          </li>)}
+        </ol>
+      </section>}
 
       <footer className="site-footer">
         <p>Are Flags Lowered? is an independent public-information service. Always follow the controlling official order for your location.</p>

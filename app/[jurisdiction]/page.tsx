@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Home from "../page.tsx";
 import { jurisdictionBySlug } from "../../lib/jurisdictions.ts";
 import { getRuntimeDb } from "../../lib/runtime-db.ts";
-import { previewAltText, previewForJurisdiction, previewTitle, validShareToken } from "../../lib/social-preview.ts";
+import { previewAltText, previewForJurisdiction, validShareToken } from "../../lib/social-preview.ts";
 import { previewImageUrl } from "../../lib/share-preview-core.ts";
 import { siteOrigin } from "../../lib/site-url.ts";
 import { currentPublicStatus } from "../../lib/current-status.ts";
@@ -44,8 +44,11 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const socialUrl = share ? `${cleanUrl}?share=${encodeURIComponent(share)}` : cleanUrl;
   const imageUrl = previewImageUrl(origin, jurisdiction.slug, share);
   const alt = previewAltText(jurisdiction, preview.usStatus, preview.stateStatus);
-  const title = previewTitle(jurisdiction, preview.usStatus, preview.stateStatus);
-  const description = `Current U.S. and ${jurisdiction.name} flag status.`;
+  const answer = await currentPublicStatus(jurisdiction);
+  const us = answer?.flagResults.find((result) => result.flagType === "us")?.status;
+  const state = answer?.flagResults.find((result) => result.flagType === "state")?.status;
+  const title = `Are flags lowered in ${jurisdiction.name}? ${us === "half_mast" || state === "half_mast" ? "Yes" : us === "uncertain" || state === "uncertain" ? "Status needs review" : "No"}`;
+  const description = `Current U.S. flag status: ${us === "half_mast" ? "half-mast" : "full mast"}. ${jurisdiction.name} flag status: ${state === "half_mast" ? "half-mast" : state === "below_us" ? "below the U.S. flag" : state === "uncertain" ? "needs review" : "full mast"}.`;
   return {
     title,
     description,
@@ -70,9 +73,11 @@ export default async function JurisdictionPage(props: PageProps) {
   const { jurisdiction } = await pageContext(props);
   const initialAnswer = await currentPublicStatus(jurisdiction);
   const origin = siteOrigin();
+  const recentOrders = initialAnswer?.recentOrders || [];
   const structuredData = { "@context": "https://schema.org", "@graph": [
     { "@type": "WebPage", name: `Are flags lowered in ${jurisdiction.name}?`, url: `${origin}/${jurisdiction.slug}`, description: `Current U.S. and ${jurisdiction.name} flag status.` },
     { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Are Flags Lowered?", item: origin }, { "@type": "ListItem", position: 2, name: jurisdiction.name, item: `${origin}/${jurisdiction.slug}` }] },
+    ...(recentOrders.length ? [{ "@type": "ItemList", name: `Recent official flag orders for ${jurisdiction.name}`, itemListElement: recentOrders.map((order, index) => ({ "@type": "ListItem", position: index + 1, item: { "@type": "WebPage", name: order.title || order.reason, url: order.officialSourceUrl, datePublished: order.officialSourcePublishedAt || undefined, description: order.reason } })) }] : []),
   ] };
   return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><Home initialStateCode={jurisdiction.stateCode} initialAnswer={initialAnswer} /></>;
 }

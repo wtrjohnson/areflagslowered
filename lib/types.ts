@@ -35,6 +35,11 @@ export type HalfMastOrder = {
   effectiveEndCondition?: string;
   timeZone?: string;
   sourceUrl: string;
+  officialSourceUrl?: string;
+  officialSourceTitle?: string;
+  officialSourcePublisher?: string;
+  officialSourcePublishedAt?: string;
+  officialSourceStatus?: "verified" | "not_available" | "needs_review";
   sourceSnapshotId: string;
   status: OrderStatus;
   alertType?: "new" | "correction" | "cancellation" | "revision";
@@ -58,6 +63,7 @@ export type StatusAnswer = {
   date: string;
   flagResults: FlagResult[];
   applicableOrders: HalfMastOrder[];
+  recentOrders?: HalfMastOrder[];
   sourceLinks: string[];
   lastCheckedAt: string;
   coverageNotice: string;

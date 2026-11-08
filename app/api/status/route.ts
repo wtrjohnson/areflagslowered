@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { answerStatus } from "../../../lib/answer-engine.ts";
 import { renderStatusText } from "../../../lib/render.ts";
 import { getDb } from "../../../db/index.ts";
-import { listActiveOrders } from "../../../db/orders.ts";
+import { listActiveOrders, listRecentOfficialOrders } from "../../../db/orders.ts";
 import { renderAllStatusesText } from "../../../lib/render.ts";
 import { orders as fallbackOrders } from "../../../lib/data.ts";
 import { demoOrders } from "../../../lib/demo-data.ts";
@@ -76,7 +76,11 @@ export async function GET(request: Request) {
   }
   if (!(process.env.NODE_ENV === "development" && demo && demoOrders[demo]) && selectedJurisdiction) {
     try {
-      const answer = publicStatusAnswer(await resolveLiveStatus(await getRuntimeDb(), selectedJurisdiction, { date, time }));
+      const db = await getRuntimeDb();
+      const answer = publicStatusAnswer({
+        ...await resolveLiveStatus(db, selectedJurisdiction, { date, time }),
+        recentOrders: await listRecentOfficialOrders(db, selectedJurisdiction.id),
+      });
       const wantsText = url.searchParams.get("format") === "text" || request.headers.get("accept")?.includes("text/plain");
       if (wantsText) return new Response(renderStatusText(answer), { headers: { "content-type": "text/plain; charset=utf-8" } });
       return NextResponse.json({ ...answer, summary: renderStatusText(answer).split("\n")[0] });

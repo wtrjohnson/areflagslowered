@@ -1,4 +1,4 @@
-const DEFAULT_SITE_ORIGIN = "https://are-flags-lowered.kvex.chatgpt.site";
+const DEFAULT_SITE_ORIGIN = "https://areflagslowered.com";
 
 export function siteOrigin() {
   let configured: string | undefined;

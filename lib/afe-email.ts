@@ -55,7 +55,10 @@ function bodyParts(raw: string, headers: Record<string, string>) {
   const body = separator >= 0 ? raw.slice(separator).replace(/^\r?\n\r?\n/, "") : "";
   const contentType = headers["content-type"] || "";
   const boundary = contentType.match(/boundary="?([^";]+)"?/i)?.[1];
-  if (!boundary) return { plainText: decodeBody(body, headers["content-transfer-encoding"]), html: "" };
+  if (!boundary) {
+    const decoded = decodeBody(body, headers["content-transfer-encoding"]);
+    return /text\/html/i.test(contentType) ? { plainText: "", html: decoded } : { plainText: decoded, html: "" };
+  }
   const parts = body.split(`--${boundary}`).map((part) => part.replace(/^\r?\n|\r?\n--\r?\n?$/g, ""));
   let plainText = "";
   let html = "";

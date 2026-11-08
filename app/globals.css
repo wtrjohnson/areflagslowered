@@ -74,6 +74,17 @@ textarea, select { font: inherit; }
 .status-uncertain .reason span { color: var(--warning); }
 .timing { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
 .meta-row { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.source-evidence { display: grid; justify-items: center; gap: 3px; margin-top: 12px; font-size: 14px; }
+.source-evidence a, .recent-orders a { color: var(--blue); font-weight: 700; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.source-evidence span { color: var(--muted); }
+.source-evidence small { color: var(--muted); font-size: 12px; }
+.recent-orders { width: min(760px, 100%); margin: 48px auto 10px; border-top: 1px solid var(--line); padding-top: 24px; }
+.recent-orders h2 { margin: 0 0 15px; font-size: 22px; letter-spacing: -.05em; }
+.recent-orders ol { margin: 0; padding: 0; list-style: none; }
+.recent-orders li { display: grid; grid-template-columns: 135px 1fr auto; gap: 14px; align-items: start; border-top: 1px solid var(--line); padding: 15px 0; }
+.recent-orders p { margin: 0; line-height: 1.35; }
+.recent-order-date { color: var(--muted); font-size: 14px; }
+.recent-orders small { color: var(--muted); font-size: 12px; }
 .feedback-widget { position: fixed; z-index: 20; right: 20px; bottom: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .feedback-launcher { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #e8e8e3; color: var(--muted); cursor: pointer; font-size: 18px; font-weight: 400; line-height: 1; }
 .feedback-launcher:hover { border-color: #bcbcb6; background: #dcdcd6; color: var(--ink); }
@@ -112,6 +123,9 @@ textarea, select { font: inherit; }
   .flag-half_mast .flag-cloth { --flag-y: calc(112.5px - 50%); }
   .flag-uncertain .flag-cloth { --flag-y: 38px; }
   .status-copy { margin-top: 24px; }
+  .recent-orders { margin-top: 40px; }
+  .recent-orders li { grid-template-columns: 1fr auto; }
+  .recent-orders li > div { grid-column: 1 / -1; grid-row: 2; }
   .feedback-widget { right: 14px; bottom: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
